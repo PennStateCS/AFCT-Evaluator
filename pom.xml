@@ -14,4 +14,27 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <dependencies>
+        <dependency>
+            <groupId>jflap</groupId>
+            <artifactId>jflap</artifactId>
+            <version>2023-summer</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/theory-autofeedback/target/theory-autofeedback-jar-with-dependencies.jar
+            </systemPath>
+        </dependency>
+    </dependencies>
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>
