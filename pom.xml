@@ -6,7 +6,7 @@
 
     <groupId>org.example</groupId>
     <artifactId>AFCT-Evaluator</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>0.1.0</version>
 
     <properties>
         <maven.compiler.source>19</maven.compiler.source>
@@ -16,12 +16,10 @@
 
     <dependencies>
         <dependency>
-            <groupId>jflap</groupId>
-            <artifactId>jflap</artifactId>
-            <version>2023-summer</version>
+            <groupId>edu.rit.cs</groupId>
+            <artifactId>afct-server</artifactId>
             <scope>system</scope>
-            <systemPath>${project.basedir}/theory-autofeedback/target/theory-autofeedback-jar-with-dependencies.jar
-            </systemPath>
+            <systemPath>${project.basedir}/afct-client.jar</systemPath>
         </dependency>
     </dependencies>
     <build>
