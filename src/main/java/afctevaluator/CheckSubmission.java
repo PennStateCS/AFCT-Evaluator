@@ -8,45 +8,31 @@ import file.XMLCodec;
 
 import java.awt.*;
 import java.io.*;
-import java.util.Map;
 
-import automata.Automaton;
 import automata.fsa.FiniteStateAutomaton;
-import automata.mealy.MealyMachine;
-import automata.mealy.MooreMachine;
 import automata.pda.PushdownAutomaton;
-import automata.turing.TuringMachine;
-import automata.turing.TuringMachineBuildingBlocks;
-import grammar.ConvertedUnrestrictedGrammar;
-import grammar.Grammar;
-import grammar.UnboundGrammar;
-import grammar.UnrestrictedGrammar;
+import grammar.*;
 import grammar.cfg.ContextFreeGrammar;
-import grammar.reg.RegularGrammar;
-import grammar.reg.RightLinearGrammar;
 import gui.action.OpenAction;
 import gui.environment.RegularEnvironment;
 import gui.environment.Universe;
 import gui.regular.ConvertToAutomatonPane;
 import gui.regular.REToFSAController;
-import pumping.ContextFreePumpingLemma;
-import pumping.PumpingLemma;
-import pumping.RegularPumpingLemma;
 import regular.Discretizer;
 import regular.RegularExpression;
 
+import static afctevaluator.CFGAnalyzerInterface.convertGrammar;
+import static afctevaluator.CFGAnalyzerInterface.gradeCFG;
+import static conversions.PDAToCFG.setupPDA;
+import static conversions.PDAToCFG.transformPDA;
+
 public class CheckSubmission {
     private final XMLCodec codec = new XMLCodec();
-
-    public static class Feedback {
-        public String feedback;
-        public boolean correct;
-
-        public Feedback(String feedback, boolean correct) {
-            this.feedback = feedback;
-            this.correct = correct;
-        }
-    }
+    //int limit = Integer.parseInt(this.env.getProperty("cfganalyzer.limit"));
+    //String analyzer = this.env.getProperty("cfganalyzer.binary");
+    // TODO - set these
+    int limit;
+    String analyzer;
 
     public CheckSubmission() {
         OpenAction.setOpenOrRead(true);
@@ -78,6 +64,11 @@ public class CheckSubmission {
 
     private static Feedback submissionTypeError(String expected, Serializable submitted) {
         String text = String.format("ERROR: expected submission to be a %s, but got a %s", expected, submitted.getClass());
+        return new Feedback(text, false);
+    }
+
+    private static Feedback tooManyStates(int expected, int actual) {
+        String text = String.format("Your submission has too many states. (%d > %d)", expected, actual);
         return new Feedback(text, false);
     }
 
@@ -125,6 +116,24 @@ public class CheckSubmission {
         return handleFSA(answerFSA, submittedFSA);
     }
 
+    private Feedback handleCFG(ContextFreeGrammar answer, ContextFreeGrammar submitted) {
+        String answerStr = convertGrammar(answer);
+        String submittedStr = convertGrammar(submitted);
+
+        return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+    }
+
+    private static ContextFreeGrammar PDAToCFG(PushdownAutomaton pda) {
+        setupPDA(pda);
+        return transformPDA(pda);
+    }
+
+    private Feedback handlePDA(PushdownAutomaton answer, PushdownAutomaton submitted) {
+        ContextFreeGrammar answerCFG = PDAToCFG(answer);
+        ContextFreeGrammar submittedCFG = PDAToCFG(submitted);
+        return handleCFG(answerCFG, submittedCFG);
+    }
+
     public Feedback isCorrect(Serializable answer, Serializable submitted, int maxStates, boolean deterministic) {
         if (answer == null && submitted == null) {
             return new Feedback("ERROR: both the submission and the answer are null!", false);
@@ -136,33 +145,53 @@ public class CheckSubmission {
 
         switch (answer) {
             case FiniteStateAutomaton answerFSA -> {
-                System.out.println("FiniteStateAutomaton");
                 if (!(submitted instanceof FiniteStateAutomaton submittedFSA)) {
                     return submissionTypeError(FiniteStateAutomaton.class.getName(), submitted);
                 }
                 if (deterministic && !Grader.isSipserDFA(submittedFSA)) {
                     return new Feedback("Your submission is not deterministic.", false);
                 } else if ((maxStates > 0) && (submittedFSA.getStates().length > maxStates)) {
-                    return new Feedback("Your submission has too many states.", false);
+                    return tooManyStates(maxStates, submittedFSA.getStates().length);
                 }
                 return handleFSA(answerFSA, submittedFSA);
             }
             case RegularExpression answerRE -> {
-                System.out.println("RegularExpression");
                 if (!(submitted instanceof RegularExpression submittedRE)) {
-                    //return new Feedback("Your submission must be a Regular Expression.", false);
                     return submissionTypeError(RegularExpression.class.getName(), submitted);
                 }
                 return handleRE(answerRE, submittedRE);
             }
-            case PushdownAutomaton pda -> {
-                System.out.println("PushdownAutomaton");
+            case ContextFreeGrammar answerCFG -> {
+                if (!(submitted instanceof ContextFreeGrammar submittedCFG)) {
+                    return submissionTypeError(ContextFreeGrammar.class.getName(), submitted);
+                }
+                if (!GrammarChecker.isContextFreeGrammar(submittedCFG)) {
+                    return new Feedback("Your grammar is not context-free.", false);
+                }
+                String[] unresolved = GrammarChecker.getUnresolvedVariables(submittedCFG);
+                if (unresolved.length > 0) {
+                    String feedback;
+                    if (unresolved.length > 1) {
+                        feedback = "Variables " + String.join(", ", unresolved) + " are unresolved.";
+                    } else {
+                        feedback = "Variable " + unresolved[0] + " is unresolved.";
+                    }
+                    return new Feedback(feedback, false);
+                }
+                return handleCFG(answerCFG, submittedCFG);
             }
-            case ContextFreeGrammar cfg -> {
-                System.out.println("ContextFreeGrammar");
+            case PushdownAutomaton answerPDA -> {
+                if (!(submitted instanceof PushdownAutomaton submittedPDA)) {
+                    return submissionTypeError(PushdownAutomaton.class.getName(), submitted);
+                }
+                if ((maxStates > 0) && (submittedPDA.getStates().length > maxStates)) {
+                    return tooManyStates(maxStates, submittedPDA.getStates().length);
+                }
+                return handlePDA(answerPDA, submittedPDA);
             }
             default -> {
-                System.out.println("BAD");
+                String text = String.format("ERROR: %s is an unsupported answer type! Please contact your professor.", answer.getClass());
+                return new Feedback(text, false);
             }
         }
     }
