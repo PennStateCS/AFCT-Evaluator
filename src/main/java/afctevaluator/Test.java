@@ -25,7 +25,7 @@ public class Test {
             System.out.print(answerFile.getName());
             System.out.print("\t");
             Serializable answer = checkSubmission.decode(answerFile);
-            checkSubmission.isCorrect(answer, submission, true);
+            checkSubmission.isCorrect(answer, submission, Integer.MAX_VALUE, true);
         }
     }
 }
