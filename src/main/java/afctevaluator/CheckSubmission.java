@@ -18,6 +18,7 @@ import grammar.UnrestrictedGrammar;
 import grammar.cfg.ContextFreeGrammar;
 import grammar.reg.RegularGrammar;
 import grammar.reg.RightLinearGrammar;
+import gui.action.OpenAction;
 import pumping.ContextFreePumpingLemma;
 import pumping.PumpingLemma;
 import pumping.RegularPumpingLemma;
@@ -26,114 +27,61 @@ import regular.RegularExpression;
 public class CheckSubmission {
     private final XMLCodec codec = new XMLCodec();
 
-    public String readFile(String filePath) {
-        StringBuilder content = new StringBuilder();
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                content.append(line).append("\n");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
+    public CheckSubmission() {
+        OpenAction.setOpenOrRead(true);
+    }
+
+    public Serializable decode(File file) {
+        if (!file.getName().endsWith(".jff")) {
+            return null;
         }
-        return content.toString();
+        return codec.decode(file, null);
     }
 
     public Serializable readAndDecode(String filePath) {
         File file = new File(filePath);
-        return codec.decode(file, null);
-    }
-    
-    
-    private void handleAutomaton(Automaton automaton) {
-        switch (automaton) {
-            case FiniteStateAutomaton finiteStateAutomaton -> {
-
-            }
-            case MooreMachine mooreMachine -> {
-
-            }
-            case MealyMachine mealyMachine -> {
-
-            }
-            case PushdownAutomaton pushdownAutomaton -> {
-
-            }
-            case TuringMachineBuildingBlocks turingMachineBuildingBlocks -> {
-
-            }
-            case TuringMachine turingMachine -> {
-
-            }
-            default -> {
-                // TODO - handle everything else
-            }
-        }
+        return this.decode(file);
     }
 
-    private void handleGrammar(Grammar grammar) {
-        switch (grammar) {
-            case ContextFreeGrammar contextFreeGrammar -> {
-
-            }
-            case ConvertedUnrestrictedGrammar convertedUnrestrictedGrammar -> {
-
-            }
-            case RightLinearGrammar rightLinearGrammar -> {
-
-            }
-            case RegularGrammar regularGrammar -> {
-
-            }
-            case UnrestrictedGrammar unrestrictedGrammar -> {
-
-            }
-            case UnboundGrammar unboundGrammar -> {
-
-            }
-            default -> {
-                // TODO - handle everything else
-            }
-        }
-    }
-
-    private void handlePumpingLemma(PumpingLemma pumpingLemma) {
-        switch (pumpingLemma) {
-            case RegularPumpingLemma regularPumpingLemma -> {
-
-            }
-            case ContextFreePumpingLemma contextFreePumpingLemma -> {
-
-            }
-            default -> {
-                // TODO - handle everything else
-            }
-        }
-    }
-
-    private void handleRegularExpression(RegularExpression regularExpression) {
-
-    }
-
-    public void isCorrect(String answerFilePath, String submissionFilePath) {
+    public void isCorrect(String answerFilePath, String submissionFilePath, boolean deterministic) {
         Serializable answer = readAndDecode(answerFilePath);
         Serializable submitted = readAndDecode(submissionFilePath);
+        this.isCorrect(answer, submitted, deterministic);
+    }
+
+    public void isCorrect(File answerFile, File submissionFile, boolean deterministic) {
+        Serializable answer = decode(answerFile);
+        Serializable submitted = decode(submissionFile);
+        this.isCorrect(answer, submitted, deterministic);
+    }
+
+    public void isCorrect(Serializable answer, Serializable submitted, boolean deterministic) {
+        if (answer == null && submitted == null) {
+            System.err.println("ERROR: both the answer and the submission are null!");
+            return;
+        } else if (answer == null) {
+            System.err.println("ERROR: answer is null!");
+            return;
+        } else if (submitted == null) {
+            System.err.println("ERROR: submission is null!");
+            return;
+        }
 
         switch (answer) {
-            case Automaton automaton -> {
-                handleAutomaton(automaton);
+            case FiniteStateAutomaton fsa -> {
+                System.out.println("FiniteStateAutomaton");
             }
-            case Grammar grammar -> {
-                handleGrammar(grammar);
+            case RegularExpression re -> {
+                System.out.println("RegularExpression");
             }
-            case PumpingLemma pumpingLemma -> {
-                handlePumpingLemma(pumpingLemma);
+            case PushdownAutomaton pda -> {
+                System.out.println("PushdownAutomaton");
             }
-            case RegularExpression regularExpression -> {
-                handleRegularExpression(regularExpression);
+            case ContextFreeGrammar cfg -> {
+                System.out.println("ContextFreeGrammar");
             }
             default -> {
-                // TODO - handle everything else
+                System.out.println("BAD");
             }
         }
     }
