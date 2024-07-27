@@ -14,6 +14,8 @@ public class Main {
             maxStates = Integer.parseInt(args[2]);
         }
         CheckSubmission checkSubmission = new CheckSubmission();
-        checkSubmission.isCorrect(answerFilePath, submissionFilePath, maxStates, deterministic);
+        Feedback feedback = checkSubmission.isCorrect(answerFilePath, submissionFilePath, maxStates, deterministic);
+        System.out.println(feedback.correct);
+        System.out.println(feedback.feedback);
     }
 }
