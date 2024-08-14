@@ -2,12 +2,20 @@ package afctevaluator;
 
 import java.util.Arrays;
 
+/**
+ * Tha main AFCT-Evaluator class is run as afct-evaluator.jar, usage message is below in showHelp().
+ *
+ *  @author Jesse Burdick-Pless jb4411@rit.edu
+ */
 public class Main {
     private static String answerFilePath;
     private static String submissionFilePath;
     private static int maxStates = -1;
     public static boolean deterministic = false;
 
+    /**
+     * A helper method for displaying the help/usage message for AFCT-Evaluator.
+     */
     private static void showHelp() {
         String helpMessage = """
                 usage: afct-evaluator.jar [-h] answerFilePath submissionFilePath [maxStates] [deterministic]
@@ -26,24 +34,54 @@ public class Main {
         System.out.println(helpMessage);
     }
 
+    /**
+     * A helper method for displaying an error when invalid command line arguments are given.
+     * The message is formatted as follows:
+     *      error: invalid command line argument: {prefix} '{arg}' {suffix}
+     *
+     * @param prefix text to put before the invalid argument
+     * @param arg the invalid argument
+     * @param suffix text to put after the invalid argument
+     */
     private static void invalidCliArg(String prefix, String arg, String suffix) {
         System.out.printf("error: invalid command line argument: %s '%s' %s\n", prefix, arg, suffix);
         showHelp();
         System.exit(1);
     }
 
+    /**
+     * A helper method for displaying an error when invalid command line arguments are given.
+     * The message is formatted as follows:
+     *      error: invalid command line argument: {prefix} '{arg}'
+     *
+     * @param prefix text to put before the invalid argument
+     * @param arg the invalid argument
+     */
     private static void invalidCliArg(String prefix, String arg) {
         System.out.printf("error: invalid command line argument: %s '%s'\n", prefix, arg);
         showHelp();
         System.exit(1);
     }
 
+    /**
+     * A helper method for displaying an error when invalid command line arguments are given.
+     * The message is formatted as follows:
+     *      error: invalid command line argument: '{arg}'
+     *
+     * @param arg the invalid argument
+     */
     private static void invalidCliArg(String arg) {
         System.out.printf("error: invalid command line argument: '%s'\n", arg);
         showHelp();
         System.exit(1);
     }
 
+    /**
+     * A helper method for handling the command line argument [deterministic], and setting Main.deterministic accordingly.
+     *
+     * @param arg the value given for [deterministic] on the command line
+     * @return true if arg is the string "true" or the string "false" (ignoring case), false otherwise
+     */
     private static boolean handleDeterministic(String arg) {
         if (arg.equalsIgnoreCase("true")) {
             Main.deterministic = true;
@@ -56,6 +94,11 @@ public class Main {
         }
     }
 
+    /**
+     * A helper method for parsing and handling command line arguments.
+     *
+     * @param args the given command line arguments
+     */
     private static void handleArgs(String[] args) {
         if (Arrays.asList(args).contains("-h") || Arrays.asList(args).contains("--help")) {
             showHelp();
@@ -96,6 +139,11 @@ public class Main {
         }
     }
 
+    /**
+     * The main entry point for the AFCT-Evaluator program. Prints feedback to System.out.
+     *
+     * @param args command line arguments
+     */
     public static void main(String[] args) {
         handleArgs(args);
         CheckSubmission checkSubmission = new CheckSubmission();
