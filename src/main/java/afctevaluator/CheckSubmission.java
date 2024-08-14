@@ -26,6 +26,11 @@ import static afctevaluator.CFGAnalyzerInterface.gradeCFG;
 import static conversions.PDAToCFG.setupPDA;
 import static conversions.PDAToCFG.transformPDA;
 
+/**
+ * Holds methods used to determine if a submission is correct, and returns a "witness string" for incorrect submissions.
+ *
+ * @author Jesse Burdick-Pless jb4411@rit.edu
+ */
 public class CheckSubmission {
     private final XMLCodec codec = new XMLCodec();
     //int limit = Integer.parseInt(this.env.getProperty("cfganalyzer.limit"));
@@ -37,10 +42,22 @@ public class CheckSubmission {
     int limit = 15;
     String analyzer;
 
+    /**
+     * Constructor for CheckSubmission.
+     */
     public CheckSubmission() {
+        // Sets the openOrRead property to true so .jff files are parsed correctly
+        // If openOrRead is false, all files appear to be treated as turing machines, and will open a GUI dialog
+        // prompting the user for input, which would halt to server
         OpenAction.setOpenOrRead(true);
     }
 
+    /**
+     * A helper method for decoding .jff files.
+     *
+     * @param file the File object to decode
+     * @return the object resulting from decoding the given file, or null if the file is not a .jff file
+     */
     public Serializable decode(File file) {
         if (!file.getName().endsWith(".jff")) {
             return null;
@@ -48,33 +65,81 @@ public class CheckSubmission {
         return codec.decode(file, null);
     }
 
+    /**
+     * A helper method for reading and decoding .jff files.
+     *
+     * @param filePath the path to the file to read in and decode
+     * @return the object resulting from decoding the given file, or null if the file is not a .jff file
+     */
     public Serializable readAndDecode(String filePath) {
         File file = new File(filePath);
         return this.decode(file);
     }
 
+    /**
+     * A helper method that takes two file paths, checks if the submission is equivalent to the answer, and returns the
+     * corresponding feedback.
+     *
+     * @param answerFilePath the path to the file containing the correct answer
+     * @param submissionFilePath the path to the file containing the submission to compare to the answer
+     * @param maxStates the maximum number of states for the problem (or -1 if there is no maximum)
+     * @param deterministic whether the problem is deterministic
+     * @return the corresponding feedback
+     */
     public Feedback isCorrect(String answerFilePath, String submissionFilePath, int maxStates, boolean deterministic) {
         Serializable answer = readAndDecode(answerFilePath);
         Serializable submitted = readAndDecode(submissionFilePath);
         return this.isCorrect(answer, submitted, maxStates, deterministic);
     }
 
+    /**
+     * A helper method that takes two File objects, checks if the submission is equivalent to the answer, and returns
+     * corresponding feedback.
+     *
+     * @param answerFile the File object containing the correct answer
+     * @param submissionFile the File object containing the submission to compare to the answer
+     * @param maxStates the maximum number of states for the problem (or -1 if there is no maximum)
+     * @param deterministic whether the problem is deterministic
+     * @return the corresponding feedback
+     */
     public Feedback isCorrect(File answerFile, File submissionFile, int maxStates, boolean deterministic) {
         Serializable answer = decode(answerFile);
         Serializable submitted = decode(submissionFile);
         return this.isCorrect(answer, submitted, maxStates, deterministic);
     }
 
+    /**
+     * A helper method that creates feedback for submissions that are an incorrect type.
+     *
+     * @param expected the expected type
+     * @param submitted the object submitted
+     * @return incorrect submission type feedback
+     */
     private static Feedback submissionTypeError(String expected, Serializable submitted) {
         String text = String.format("ERROR: expected submission to be a %s, but got a %s", expected, submitted.getClass());
         return new Feedback(text, false);
     }
 
+    /**
+     * A helper method that creates feedback for submissions that have too many states.
+     *
+     * @param expected the expected maximum number of states
+     * @param actual the actual submitted number of states
+     * @return too many states feedback
+     */
     private static Feedback tooManyStates(int expected, int actual) {
         String text = String.format("Your submission has too many states. (%d > %d)", expected, actual);
         return new Feedback(text, false);
     }
 
+    /**
+     * A helper method that checks if the submitted Finite State Automaton (FSA) is equivalent to the answer FSA, and
+     * returns corresponding feedback.
+     *
+     * @param answerFSA the correct FSA
+     * @param submittedFSA the submitted FSA
+     * @return the corresponding feedback
+     */
     private Feedback handleFSA(FiniteStateAutomaton answerFSA, FiniteStateAutomaton submittedFSA) {
         EquivalenceNlgNWitness grader = new EquivalenceNlgNWitness(answerFSA, submittedFSA, true);
 
@@ -97,6 +162,12 @@ public class CheckSubmission {
         return new Feedback(feedback, correct);
     }
 
+    /**
+     * A helper method for converting a Regular Expression (RE) into a Nondeterministic Finite Automaton (NFA).
+     *
+     * @param re the RE to convert
+     * @return the resulting NFA
+     */
     private static FiniteStateAutomaton REToNFA(RegularExpression re) {
         FiniteStateAutomaton nfa = new FiniteStateAutomaton();
         State initialState = nfa.createState(new Point(60, 40));
@@ -113,12 +184,30 @@ public class CheckSubmission {
         return nfa;
     }
 
+    /**
+     * A helper method that converts the given answer and submission Regular Expressions (REs) into Nondeterministic
+     * Finite Automatons (NFAs), then calls handleFSA() to check if they are equivalent, and returns corresponding
+     * feedback.
+     *
+     * @param answer the correct RE
+     * @param submitted the submitted RE
+     * @return the corresponding feedback
+     */
     private Feedback handleRE(RegularExpression answer, RegularExpression submitted) {
         FiniteStateAutomaton answerFSA = REToNFA(answer);
         FiniteStateAutomaton submittedFSA = REToNFA(submitted);
+
         return handleFSA(answerFSA, submittedFSA);
     }
 
+    /**
+     * A helper method that converts the given answer and submission Context Free Grammars (CFGs) into strings formatted
+     * for CFGAnalyzer, calls gradeCFG() to check if they are equivalent, and returns corresponding feedback.
+     *
+     * @param answer the correct CFG
+     * @param submitted the submitted CFG
+     * @return the corresponding feedback
+     */
     private Feedback handleCFG(ContextFreeGrammar answer, ContextFreeGrammar submitted) {
         String answerStr = convertGrammar(answer);
         String submittedStr = convertGrammar(submitted);
@@ -126,17 +215,53 @@ public class CheckSubmission {
         return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
     }
 
+    /**
+     * A helper method for converting a Pushdown Automaton (PDA) into a Context Free Grammar (CFG).
+     *
+     * @param pda the PDA to convert
+     * @return the resulting CFG
+     */
     private static ContextFreeGrammar PDAToCFG(PushdownAutomaton pda) {
         setupPDA(pda);
         return transformPDA(pda);
     }
 
+    /**
+     * A helper method that converts the given answer and submission Pushdown Automatons (PDAs) into Context Free
+     * Grammars (CFGs), then calls handleCFG() to check if they are equivalent, and returns corresponding feedback.
+     *
+     * @param answer the correct PDA
+     * @param submitted the submitted PDA
+     * @return the corresponding feedback
+     */
     private Feedback handlePDA(PushdownAutomaton answer, PushdownAutomaton submitted) {
         ContextFreeGrammar answerCFG = PDAToCFG(answer);
         ContextFreeGrammar submittedCFG = PDAToCFG(submitted);
         return handleCFG(answerCFG, submittedCFG);
     }
 
+
+    /**
+     * A helper method that takes two file paths, checks if the submission is equivalent to the answer, and returns the
+     * corresponding feedback.
+     *
+     * @param answerFilePath the path to the file containing the correct answer
+     * @param submissionFilePath the path to the file containing the submission to compare to the answer
+     * @param maxStates the maximum number of states for the problem (or -1 if there is no maximum)
+     * @param deterministic whether the problem is deterministic
+     * @return the corresponding feedback
+     */
+
+    /**
+     * Takes a correct answer and a submission, determines the type of problem, calls the method for handling that type
+     * of problem to check if the submission is equivalent to the answer, and returns the corresponding feedback.
+     *
+     * @param answer the correct answer
+     * @param submitted the submission to check
+     * @param maxStates the maximum number of states for the problem (or -1 if there is no maximum)
+     * @param deterministic whether the problem is deterministic
+     * @return the corresponding feedback
+     */
     public Feedback isCorrect(Serializable answer, Serializable submitted, int maxStates, boolean deterministic) {
         if (answer == null && submitted == null) {
             return new Feedback("ERROR: both the submission and the answer are null!", false);
