@@ -23,6 +23,7 @@ public class Main {
                 options:
                     -h, --help              show this help message and exit
                 """;
+        System.out.println(helpMessage);
     }
 
     private static void invalidCliArg(String prefix, String arg, String suffix) {

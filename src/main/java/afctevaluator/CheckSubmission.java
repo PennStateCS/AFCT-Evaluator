@@ -31,7 +31,10 @@ public class CheckSubmission {
     //int limit = Integer.parseInt(this.env.getProperty("cfganalyzer.limit"));
     //String analyzer = this.env.getProperty("cfganalyzer.binary");
     // TODO - set these
-    int limit;
+    // Set to 15 based on the application.properties file from the original AFCT server
+    // I have genuinely no idea if this is a good value to use
+    // TODO - make these possible to change dynamically from the website
+    int limit = 15;
     String analyzer;
 
     public CheckSubmission() {
