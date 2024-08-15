@@ -1,0 +1,1 @@
+Let L = {w ∈ {a, b}* | w has twice as many a's as b's}. Draw the state diagram of a PDA that accepts language L. Your PDA should not be overly complicated.

@@ -1,0 +1,1 @@
+Let L = {a^i b^j c^k | j > i + k}. Draw the state diagram of a PDA that accepts language L. Your PDA should not be overly complicated.
