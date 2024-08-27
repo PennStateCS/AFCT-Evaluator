@@ -1,0 +1,4 @@
+Finite State Automaton
+ 	
+Create a Deterministic Finite State Automaton that accepts the following language L: 
+L = {w ∈ {a,b}*|w has an even number of b's and w contains the substring aa}

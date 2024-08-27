@@ -1,0 +1,1 @@
+java -jar afct-evaluator.jar "../TESTINPUT/DFA 1 Example Solution.jff" "../TESTINPUT/DFA 1.jff"

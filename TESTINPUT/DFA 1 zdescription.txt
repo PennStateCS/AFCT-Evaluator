@@ -1,0 +1,3 @@
+Finite State Automaton
+ 	
+Create a Deterministic Finite State Automaton that accepts strings that containing any number of b's and at least one a, in any order.
