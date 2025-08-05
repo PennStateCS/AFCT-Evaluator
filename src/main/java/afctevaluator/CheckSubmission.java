@@ -39,7 +39,9 @@ public class CheckSubmission {
     // Set to 15 based on the application.properties file from the original AFCT server
     // I have genuinely no idea if this is a good value to use
     // TODO - make these possible to change dynamically from the website
-    int limit = 15;
+    private static final String varLimit = "CFGANALYZER_LIMIT";
+    private static final String varBinary = "CFGANALYZER_BINARY";
+    int limit;
     String analyzer;
 
     /**
@@ -50,6 +52,67 @@ public class CheckSubmission {
         // If openOrRead is false, all files appear to be treated as turing machines, and will open a GUI dialog
         // prompting the user for input, which would halt to server
         OpenAction.setOpenOrRead(true);
+
+        String limitString;
+
+        boolean useDefaultLimit = true;
+        try {
+            limitString = System.getenv(varLimit);
+            if (limitString == null) {
+                System.out.printf("warning: environment variable '%s' not set\n", varLimit);
+            } else {
+                limit = Integer.parseInt(limitString);
+                useDefaultLimit = false;
+            }
+        } catch (SecurityException e) {
+            envVarError("inaccessible", "insufficient permissions to access environment variable", varLimit);
+        } catch (NumberFormatException e) {
+            envVarError("invalid", String.format("'%s' must be an integer: unable to convert", varLimit), System.getenv(varLimit), "to an integer.");
+            //String.format("%s must be an integer: unable to convert", varLimit);
+            //System.out.printf("error: invalid environment variable: %s '%s' %s\n", varLimit, System.getenv(varLimit), varLimit, prefix, envVar, suffix);
+        }
+
+        if (useDefaultLimit) {
+            limit = 15;
+            System.out.printf("Using default CFGAnalyzer limit: %d\n", limit);
+        }
+
+        // TODO: once the CFGAnalyzer binary location is retrieved from the env var, check if the binary actually exists there
+        try {
+            analyzer = System.getenv(varBinary);
+            if (analyzer == null) {
+                System.out.printf("warning: environment variable '%s' not set\n", varBinary);
+            }
+        } catch (SecurityException e) {
+            envVarError("inaccessible", "insufficient permissions to access environment variable", varBinary);
+        }
+    }
+
+    /**
+     * A helper method for displaying an error when issues with environment variables are encountered.
+     * The message is formatted as follows:
+     *      error: {reason} environment variable: {prefix} '{envVar}'
+     *
+     * @param reason text to put before 'environment variable'
+     * @param prefix text to put before the environment variable
+     * @param envVar the environment variable
+     */
+    private static void envVarError(String reason, String prefix, String envVar) {
+        System.out.printf("error: %s environment variable: %s '%s'\n", reason, prefix, envVar);
+    }
+
+    /**
+     * A helper method for displaying an error when issues with environment variables are encountered.
+     * The message is formatted as follows:
+     *      error: {reason} environment variable: {prefix} '{envVar} {suffix}'
+     *
+     * @param reason text to put before 'environment variable'
+     * @param prefix text to put before the environment variable
+     * @param envVar the environment variable
+     * @param suffix text to put after the environment variable
+     */
+    private static void envVarError(String reason, String prefix, String envVar, String suffix) {
+        System.out.printf("error: %s environment variable: %s '%s' %s\n", reason, prefix, envVar, suffix);
     }
 
     /**
