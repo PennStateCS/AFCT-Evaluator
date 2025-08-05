@@ -1,0 +1,2 @@
+java -jar afct-evaluator.jar "../TESTINPUT/DFA 1.jff" "../TESTINPUT/DFA 1 Example Solution.jff" true
+java -jar afct-evaluator.jar "../TESTINPUT/DFA 1.jff" "../TESTINPUT/Hard DFA.jff" true
