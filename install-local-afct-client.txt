@@ -1,1 +1,1 @@
-install:install-file -Dfile=/afct-client/afct-client.jar -DgroupId=edu.rit.cs -DartifactId=afct-client -Dversion=1.1.2 -Dpackaging=jar
+mvn install:install-file -Dfile="afct-client/afct-client.jar" -DgroupId="edu.rit.cs" -DartifactId="afct-client" -Dversion="1.1.2" -Dpackaging=jar
