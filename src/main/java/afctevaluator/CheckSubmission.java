@@ -59,7 +59,7 @@ public class CheckSubmission {
         try {
             limitString = System.getenv(varLimit);
             if (limitString == null) {
-                System.out.printf("warning: environment variable '%s' not set\n", varLimit);
+                System.err.printf("warning: environment variable '%s' not set\n", varLimit);
             } else {
                 limit = Integer.parseInt(limitString);
                 useDefaultLimit = false;
@@ -74,14 +74,14 @@ public class CheckSubmission {
 
         if (useDefaultLimit) {
             limit = 15;
-            System.out.printf("Using default CFGAnalyzer limit: %d\n", limit);
+            System.err.printf("Using default CFGAnalyzer limit: %d\n", limit);
         }
 
         // TODO: once the CFGAnalyzer binary location is retrieved from the env var, check if the binary actually exists there
         try {
             analyzer = System.getenv(varBinary);
             if (analyzer == null) {
-                System.out.printf("warning: environment variable '%s' not set\n", varBinary);
+                System.err.printf("warning: environment variable '%s' not set\n", varBinary);
             }
         } catch (SecurityException e) {
             envVarError("inaccessible", "insufficient permissions to access environment variable", varBinary);
@@ -98,7 +98,7 @@ public class CheckSubmission {
      * @param envVar the environment variable
      */
     private static void envVarError(String reason, String prefix, String envVar) {
-        System.out.printf("error: %s environment variable: %s '%s'\n", reason, prefix, envVar);
+        System.err.printf("error: %s environment variable: %s '%s'\n", reason, prefix, envVar);
     }
 
     /**
@@ -112,7 +112,7 @@ public class CheckSubmission {
      * @param suffix text to put after the environment variable
      */
     private static void envVarError(String reason, String prefix, String envVar, String suffix) {
-        System.out.printf("error: %s environment variable: %s '%s' %s\n", reason, prefix, envVar, suffix);
+        System.err.printf("error: %s environment variable: %s '%s' %s\n", reason, prefix, envVar, suffix);
     }
 
     /**
