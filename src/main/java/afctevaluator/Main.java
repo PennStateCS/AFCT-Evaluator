@@ -2,7 +2,10 @@ package afctevaluator;
 
 import com.google.gson.Gson;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Tha main AFCT-Evaluator class is run as afct-evaluator.jar, usage message is below in showHelp().
@@ -14,13 +17,14 @@ public class Main {
     private static String submissionFilePath;
     private static int maxStates = -1;
     public static boolean deterministic = false;
+    private static boolean outputJson = false;
 
     /**
      * A helper method for displaying the help/usage message for AFCT-Evaluator.
      */
     private static void showHelp() {
         String helpMessage = """
-                usage: afct-evaluator.jar [-h] answerFilePath submissionFilePath [maxStates] [deterministic]
+                usage: afct-evaluator.jar [-h] [-j] answerFilePath submissionFilePath [maxStates] [deterministic]
                                 
                 positional arguments:
                     answerFilePath          path to the file with the correct answer
@@ -32,6 +36,7 @@ public class Main {
                                 
                 options:
                     -h, --help              show this help message and exit
+                    -j, --json              display output in JSON format
                 """;
         System.out.println(helpMessage);
     }
@@ -102,40 +107,53 @@ public class Main {
      * @param args the given command line arguments
      */
     private static void handleArgs(String[] args) {
-        if (Arrays.asList(args).contains("-h") || Arrays.asList(args).contains("--help")) {
+        List<String> argList = Arrays.asList(args);
+
+        if (argList.contains("-h") || argList.contains("--help")) {
             showHelp();
             System.exit(0);
         }
 
-        if (args.length < 2) {
+        argList = new ArrayList<>(argList);
+
+        if (argList.contains("-j")) {
+            argList.removeAll(Collections.singleton("-j"));
+            Main.outputJson = true;
+        }
+        if (argList.contains("--json")) {
+            argList.removeAll(Collections.singleton("--json"));
+            Main.outputJson = true;
+        }
+
+        if (argList.size() < 2) {
             System.out.print("error: not enough command line arguments: ");
-            if (args.length == 0) {
+            if (argList.isEmpty()) {
                 System.out.println("answerFilePath and submissionFilePath are required.");
-            } else if (args.length == 1) {
+            } else if (argList.size() == 1) {
                 System.out.println("submissionFilePath is required.");
             }
             showHelp();
             System.exit(1);
         }
 
-        Main.answerFilePath = args[0];
-        Main.submissionFilePath = args[1];
+        Main.answerFilePath = argList.get(0);
+        Main.submissionFilePath = argList.get(1);
 
-        if (args.length > 3) {
+        if (argList.size() > 3) {
             try {
-                Main.maxStates = Integer.parseInt(args[2]);
+                Main.maxStates = Integer.parseInt(argList.get(2));
             } catch (NumberFormatException ignored) {
-                invalidCliArg("maxStates must be an integer: unable to convert", args[2], "to an integer.");
+                invalidCliArg("maxStates must be an integer: unable to convert", argList.get(2), "to an integer.");
             }
-            if (!handleDeterministic(args[3])) {
-                invalidCliArg("deterministic must be 'true' or 'false' but got:", args[3]);
+            if (!handleDeterministic(argList.get(3))) {
+                invalidCliArg("deterministic must be 'true' or 'false' but got:", argList.get(3));
             }
-        } else if (args.length > 2) {
+        } else if (argList.size() > 2) {
             try {
-                Main.maxStates = Integer.parseInt(args[2]);
+                Main.maxStates = Integer.parseInt(argList.get(2));
             } catch (NumberFormatException ignored) {
-                if (!handleDeterministic(args[2])) {
-                    invalidCliArg(args[2]);
+                if (!handleDeterministic(argList.get(2))) {
+                    invalidCliArg("maxStates must be an integer: unable to convert", argList.get(2), "to an integer.");
                 }
             }
         }
@@ -152,8 +170,27 @@ public class Main {
         Feedback feedback = checkSubmission.isCorrect(Main.answerFilePath, Main.submissionFilePath, Main.maxStates, Main.deterministic);
         feedback.addWarningsAndErrors(checkSubmission.warnings, checkSubmission.errors);
 
-        Gson gson = new Gson();
-        String json = gson.toJson(feedback);
-        System.out.println(json);
+        if (Main.outputJson) {
+            Gson gson = new Gson();
+            String json = gson.toJson(feedback);
+            System.out.println(json);
+        } else {
+            System.out.println(feedback.correct);
+            System.out.println(feedback.feedback);
+
+            if (!feedback.warnings.isEmpty()) {
+                System.out.println("\nWarnings:");
+                for (String warning : feedback.warnings) {
+                    System.out.println(warning);
+                }
+            }
+
+            if (!feedback.errors.isEmpty()) {
+                System.out.println("\nErrors:");
+                for (String error : feedback.errors) {
+                    System.out.println(error);
+                }
+            }
+        }
     }
 }
