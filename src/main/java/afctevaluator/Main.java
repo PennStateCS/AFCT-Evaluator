@@ -1,5 +1,7 @@
 package afctevaluator;
 
+import com.google.gson.Gson;
+
 import java.util.Arrays;
 
 /**
@@ -148,7 +150,10 @@ public class Main {
         handleArgs(args);
         CheckSubmission checkSubmission = new CheckSubmission();
         Feedback feedback = checkSubmission.isCorrect(Main.answerFilePath, Main.submissionFilePath, Main.maxStates, Main.deterministic);
-        System.out.println(feedback.correct);
-        System.out.println(feedback.feedback);
+        feedback.addWarningsAndErrors(checkSubmission.warnings, checkSubmission.errors);
+
+        Gson gson = new Gson();
+        String json = gson.toJson(feedback);
+        System.out.println(json);
     }
 }

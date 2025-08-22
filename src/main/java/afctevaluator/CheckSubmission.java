@@ -8,6 +8,8 @@ import file.XMLCodec;
 
 import java.awt.*;
 import java.io.*;
+import java.util.ArrayList;
+import java.util.Arrays;
 
 import automata.fsa.FiniteStateAutomaton;
 import automata.pda.PushdownAutomaton;
@@ -43,6 +45,8 @@ public class CheckSubmission {
     private static final String varBinary = "CFGANALYZER_BINARY";
     int limit;
     String analyzer;
+    public ArrayList<String> warnings;
+    public ArrayList<String> errors;
 
     /**
      * Constructor for CheckSubmission.
@@ -53,13 +57,16 @@ public class CheckSubmission {
         // prompting the user for input, which would halt to server
         OpenAction.setOpenOrRead(true);
 
+        warnings = new ArrayList<>();
+        errors = new ArrayList<>();
+
         String limitString;
 
         boolean useDefaultLimit = true;
         try {
             limitString = System.getenv(varLimit);
             if (limitString == null) {
-                System.err.printf("warning: environment variable '%s' not set\n", varLimit);
+                warnings.add(String.format("warning: environment variable '%s' not set", varLimit));
             } else {
                 limit = Integer.parseInt(limitString);
                 useDefaultLimit = false;
@@ -74,14 +81,14 @@ public class CheckSubmission {
 
         if (useDefaultLimit) {
             limit = 15;
-            System.err.printf("Using default CFGAnalyzer limit: %d\n", limit);
+            warnings.add(String.format("Using default CFGAnalyzer limit: %d", limit));
         }
 
         // TODO: once the CFGAnalyzer binary location is retrieved from the env var, check if the binary actually exists there
         try {
             analyzer = System.getenv(varBinary);
             if (analyzer == null) {
-                System.err.printf("warning: environment variable '%s' not set\n", varBinary);
+                warnings.add(String.format("warning: environment variable '%s' not set", varBinary));
             }
         } catch (SecurityException e) {
             envVarError("inaccessible", "insufficient permissions to access environment variable", varBinary);
@@ -97,8 +104,8 @@ public class CheckSubmission {
      * @param prefix text to put before the environment variable
      * @param envVar the environment variable
      */
-    private static void envVarError(String reason, String prefix, String envVar) {
-        System.err.printf("error: %s environment variable: %s '%s'\n", reason, prefix, envVar);
+    private void envVarError(String reason, String prefix, String envVar) {
+        this.errors.add(String.format("error: %s environment variable: %s '%s'\n", reason, prefix, envVar));
     }
 
     /**
@@ -111,8 +118,8 @@ public class CheckSubmission {
      * @param envVar the environment variable
      * @param suffix text to put after the environment variable
      */
-    private static void envVarError(String reason, String prefix, String envVar, String suffix) {
-        System.err.printf("error: %s environment variable: %s '%s' %s\n", reason, prefix, envVar, suffix);
+    private void envVarError(String reason, String prefix, String envVar, String suffix) {
+        this.errors.add(String.format("error: %s environment variable: %s '%s' %s\n", reason, prefix, envVar, suffix));
     }
 
     /**
@@ -169,30 +176,6 @@ public class CheckSubmission {
         Serializable answer = decode(answerFile);
         Serializable submitted = decode(submissionFile);
         return this.isCorrect(answer, submitted, maxStates, deterministic);
-    }
-
-    /**
-     * A helper method that creates feedback for submissions that are an incorrect type.
-     *
-     * @param expected the expected type
-     * @param submitted the object submitted
-     * @return incorrect submission type feedback
-     */
-    private static Feedback submissionTypeError(String expected, Serializable submitted) {
-        String text = String.format("ERROR: expected submission to be a %s, but got a %s", expected, submitted.getClass());
-        return new Feedback(text, false);
-    }
-
-    /**
-     * A helper method that creates feedback for submissions that have too many states.
-     *
-     * @param expected the expected maximum number of states
-     * @param actual the actual submitted number of states
-     * @return too many states feedback
-     */
-    private static Feedback tooManyStates(int expected, int actual) {
-        String text = String.format("Your submission has too many states. (%d > %d)", expected, actual);
-        return new Feedback(text, false);
     }
 
     /**
@@ -303,18 +286,6 @@ public class CheckSubmission {
         return handleCFG(answerCFG, submittedCFG);
     }
 
-
-    /**
-     * A helper method that takes two file paths, checks if the submission is equivalent to the answer, and returns the
-     * corresponding feedback.
-     *
-     * @param answerFilePath the path to the file containing the correct answer
-     * @param submissionFilePath the path to the file containing the submission to compare to the answer
-     * @param maxStates the maximum number of states for the problem (or -1 if there is no maximum)
-     * @param deterministic whether the problem is deterministic
-     * @return the corresponding feedback
-     */
-
     /**
      * Takes a correct answer and a submission, determines the type of problem, calls the method for handling that type
      * of problem to check if the submission is equivalent to the answer, and returns the corresponding feedback.
@@ -327,34 +298,34 @@ public class CheckSubmission {
      */
     public Feedback isCorrect(Serializable answer, Serializable submitted, int maxStates, boolean deterministic) {
         if (answer == null && submitted == null) {
-            return new Feedback("ERROR: both the submission and the answer are null!", false);
+            return Feedback.contactProfessorError("ERROR: both the submission and the answer are null!");
         } else if (answer == null) {
-            return new Feedback("ERROR: answer is null!", false);
+            return Feedback.contactProfessorError("ERROR: answer is null!");
         } else if (submitted == null) {
-            return new Feedback("ERROR: submission is null!", false);
+            return new Feedback("Your submission is null!", false);
         }
 
         switch (answer) {
             case FiniteStateAutomaton answerFSA -> {
                 if (!(submitted instanceof FiniteStateAutomaton submittedFSA)) {
-                    return submissionTypeError(FiniteStateAutomaton.class.getName(), submitted);
+                    return Feedback.submissionTypeError(FiniteStateAutomaton.class.getName(), submitted);
                 }
                 if (deterministic && !Grader.isSipserDFA(submittedFSA)) {
                     return new Feedback("Your submission is not deterministic.", false);
                 } else if ((maxStates > 0) && (submittedFSA.getStates().length > maxStates)) {
-                    return tooManyStates(maxStates, submittedFSA.getStates().length);
+                    return Feedback.tooManyStates(maxStates, submittedFSA.getStates().length);
                 }
                 return handleFSA(answerFSA, submittedFSA);
             }
             case RegularExpression answerRE -> {
                 if (!(submitted instanceof RegularExpression submittedRE)) {
-                    return submissionTypeError(RegularExpression.class.getName(), submitted);
+                    return Feedback.submissionTypeError(RegularExpression.class.getName(), submitted);
                 }
                 return handleRE(answerRE, submittedRE);
             }
             case ContextFreeGrammar answerCFG -> {
                 if (!(submitted instanceof ContextFreeGrammar submittedCFG)) {
-                    return submissionTypeError(ContextFreeGrammar.class.getName(), submitted);
+                    return Feedback.submissionTypeError(ContextFreeGrammar.class.getName(), submitted);
                 }
                 if (!GrammarChecker.isContextFreeGrammar(submittedCFG)) {
                     return new Feedback("Your grammar is not context-free.", false);
@@ -373,16 +344,16 @@ public class CheckSubmission {
             }
             case PushdownAutomaton answerPDA -> {
                 if (!(submitted instanceof PushdownAutomaton submittedPDA)) {
-                    return submissionTypeError(PushdownAutomaton.class.getName(), submitted);
+                    return Feedback.submissionTypeError(PushdownAutomaton.class.getName(), submitted);
                 }
                 if ((maxStates > 0) && (submittedPDA.getStates().length > maxStates)) {
-                    return tooManyStates(maxStates, submittedPDA.getStates().length);
+                    return Feedback.tooManyStates(maxStates, submittedPDA.getStates().length);
                 }
                 return handlePDA(answerPDA, submittedPDA);
             }
             default -> {
-                String text = String.format("ERROR: %s is an unsupported answer type! Please contact your professor.", answer.getClass());
-                return new Feedback(text, false);
+                String error = String.format("ERROR: %s is an unsupported answer type!", answer.getClass());
+                return Feedback.contactProfessorError(error);
             }
         }
     }

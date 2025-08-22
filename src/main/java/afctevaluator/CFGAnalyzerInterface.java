@@ -108,8 +108,17 @@ public class CFGAnalyzerInterface {
         return ret;
     }
 
-    private static String getGrade(File answerTempFile, File submittedTempFile, String analyzer, String limit) {
+    public static String getStackTraceAsString(Throwable throwable) {
+        StringBuilder sb = new StringBuilder();
+        for (StackTraceElement element : throwable.getStackTrace()) {
+            sb.append(element.toString()).append("\n");
+        }
+        return sb.toString();
+    }
+
+    private static Feedback getGrade(File answerTempFile, File submittedTempFile, String analyzer, String limit) {
         String feedback = null;
+        String error = null;
 
         try {
             ProcessBuilder pb = new ProcessBuilder(analyzer, "--equivalence", "--maxbound", limit, answerTempFile.getAbsolutePath(), submittedTempFile.getAbsolutePath());
@@ -121,16 +130,23 @@ public class CFGAnalyzerInterface {
                 feedback = p.getInputStream().toString();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            error = getStackTraceAsString(e);
+            //e.printStackTrace();
         } catch (InterruptedException ie) {
-            ie.printStackTrace();
+            error = getStackTraceAsString(ie);
+            //ie.printStackTrace();
         }
 
-        return feedback;
+        return new Feedback(feedback, false, error);
     }
 
     public static Feedback gradeCFG(String answerStr, String submittedStr, String analyzer, int limit) {
-        String feedback;
+        Feedback trackWarningsAndErrors = new Feedback(null, false);
+        Feedback feedback;
+        String text;
+        String error = null;
+        ArrayList<String> warnings = new ArrayList<>();
+        ArrayList<String> errors = new ArrayList<>();
         boolean correct = false;
         try {
             File answerTempFile = File.createTempFile("cfganalyzer", ".cfg");
@@ -144,21 +160,32 @@ public class CFGAnalyzerInterface {
             }
             String limitStr = Integer.toString(limit);
             feedback = getGrade(answerTempFile, submittedTempFile, analyzer, limitStr);
+            trackWarningsAndErrors.addWarningsAndErrors(feedback.warnings, feedback.errors);
 
-            if (feedback == null) {
+            if (feedback.feedback == null) {
                 feedback = getGrade(submittedTempFile, answerTempFile, analyzer, limitStr);
+                trackWarningsAndErrors.addWarningsAndErrors(feedback.warnings, feedback.errors);
             }
 
-            if (feedback.isEmpty()) {
+            if (feedback.feedback.isEmpty()) {
                 correct = true;
-                feedback = "Correct!";
+                text = "Correct!";
+            } else {
+                text = feedback.feedback;
             }
-            return new Feedback(feedback, correct);
+            feedback = new Feedback(text, correct);
+            feedback.addWarningsAndErrors(trackWarningsAndErrors.warnings, trackWarningsAndErrors.errors);
+            return feedback;
         } catch (FileNotFoundException fne) {
-            fne.printStackTrace();
+            error = getStackTraceAsString(fne);
+            //fne.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
+            error = getStackTraceAsString(e);
+            //e.printStackTrace();
         }
-        return new Feedback("A server error occurred. Please contact your professor.", false);
+        feedback = new Feedback("A server error occurred. Please contact your professor.", false);
+        trackWarningsAndErrors.errors.add(error);
+        feedback.addWarningsAndErrors(trackWarningsAndErrors.warnings, trackWarningsAndErrors.errors);
+        return feedback;
     }
 }
