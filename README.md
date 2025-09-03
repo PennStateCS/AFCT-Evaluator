@@ -3,6 +3,7 @@
 * Java Development Kit (JDK) (preferably from Oracle): https://www.oracle.com/java/technologies/downloads/
 * Maven: https://maven.apache.org/download.cgi
   * A guide to install Maven on Windows: https://phoenixnap.com/kb/install-maven-windows
+  * A guide to install Maven on Linux: https://www.geeksforgeeks.org/devops/how-to-install-maven-on-linux/
 
 ## Maven Command
 To compile the AFCT Evaluator, you will first need to add the AFCT Client as a Maven dependency.
