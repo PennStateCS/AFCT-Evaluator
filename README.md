@@ -14,7 +14,7 @@ mvn install:install-file -Dfile="afct-client/afct-client.jar" -DgroupId="edu.rit
 
 ## Set Enviroment Variables
 ### Automatic Setup
-* Go to the `/Envrioment-Vars' folder and change the path to the CFGAnalyzer binary file in either the `.ps1` (Windows) or `.sh` (Linux) file
+* Go to the `/Envrioment-Vars` folder and change the path to the CFGAnalyzer binary file in either the `.ps1` (Windows) or `.sh` (Linux) file
 * Run appropriate file
 
 ### Manual Setup
