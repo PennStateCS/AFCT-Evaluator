@@ -13,7 +13,12 @@ mvn install:install-file -Dfile="afct-client/afct-client.jar" -DgroupId="edu.rit
 ```
 
 ## Set Enviroment Variables
-* Set the enviroment variable `CFGANALYZER_BINARY` to the `"absolute or relative path of your CFGAnalyzer binary file here"`
+### Automatic Setup
+* Go to the `/Envrioment-Vars' folder and change the path to the CFGAnalyzer binary file in either the `.ps1` (Windows) or `.sh` (Linux) file
+* Run appropriate file
+
+### Manual Setup
+* Set the enviroment variable `CFGANALYZER_BINARY` to the `"absolute path to CFGAnalyzer binary file here"`
 * Set the enviroment variable `CFGANALYZER_BINARY` to `15`
 
 ## Old README
