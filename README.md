@@ -26,4 +26,4 @@ mvn install:install-file -Dfile="afct-client/afct-client.jar" -DgroupId="edu.rit
 * Run `java -jar afct-evaluator.jar -h` for more details
 
 ## Note
-* Testing files are located in the `TESTINPUT` folder
+* Testing files are located in the `TESTINPUT` folder, including a text file including example scripts
