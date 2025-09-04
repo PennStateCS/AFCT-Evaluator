@@ -37,7 +37,6 @@ public class CheckSubmission {
     private final XMLCodec codec = new XMLCodec();
     //int limit = Integer.parseInt(this.env.getProperty("cfganalyzer.limit"));
     //String analyzer = this.env.getProperty("cfganalyzer.binary");
-    // TODO - set these
     // Set to 15 based on the application.properties file from the original AFCT server
     // I have genuinely no idea if this is a good value to use
     // TODO - make these possible to change dynamically from the website
@@ -45,6 +44,7 @@ public class CheckSubmission {
     private static final String varBinary = "CFGANALYZER_BINARY";
     int limit;
     String analyzer;
+    File file;
     public ArrayList<String> warnings;
     public ArrayList<String> errors;
 
@@ -84,11 +84,16 @@ public class CheckSubmission {
             warnings.add(String.format("Using default CFGAnalyzer limit: %d", limit));
         }
 
-        // TODO: once the CFGAnalyzer binary location is retrieved from the env var, check if the binary actually exists there
+        // Check if file was given and if it exists with proper permisions
         try {
             analyzer = System.getenv(varBinary);
+            file = new File(analyzer);
             if (analyzer == null) {
                 warnings.add(String.format("warning: environment variable '%s' not set", varBinary));
+            }
+            else if(!file.exists()){{
+                    warnings.add(String.format("warning: file '%s' does not exist on system", varBinary));
+                }
             }
         } catch (SecurityException e) {
             envVarError("inaccessible", "insufficient permissions to access environment variable", varBinary);
