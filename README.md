@@ -22,7 +22,7 @@ mvn install:install-file -Dfile="afct-client/afct-client.jar" -DgroupId="edu.rit
 * Set the enviroment variable `CFGANALYZER_BINARY` to `15`
 
 ## Running Program
-* Set the current directory to `path_to_repo\target`
+* Change the current directory to `target` folder
 * Run `java -jar afct-evaluator.jar -h` for more details
 
 ## Note
