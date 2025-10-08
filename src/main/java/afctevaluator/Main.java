@@ -8,7 +8,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Tha main AFCT-Evaluator class is run as afct-evaluator.jar, usage message is below in showHelp().
+ * The main AFCT-Evaluator class is run as afct-evaluator.jar, usage message is below in showHelp().
  *
  *  @author Jesse Burdick-Pless jb4411@rit.edu
  */
