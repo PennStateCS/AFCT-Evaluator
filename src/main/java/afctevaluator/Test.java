@@ -22,10 +22,12 @@ public class Test {
             if (!answerFile.getName().endsWith(".jff")) {
                 continue;
             }
-            System.out.print(answerFile.getName());
-            System.out.print("\t");
+            System.out.println(answerFile.getName());
+            //System.out.print("\t");
             Serializable answer = checkSubmission.decode(answerFile);
-            checkSubmission.isCorrect(answer, submission, Integer.MAX_VALUE, true);
+            Feedback feedback = checkSubmission.isCorrect(answer, submission, Integer.MAX_VALUE, true);
+            System.out.println("\t" + feedback.correct);
+            System.out.println("\t" + feedback.feedback);
         }
     }
 }

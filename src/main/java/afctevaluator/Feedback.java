@@ -85,8 +85,8 @@ public class Feedback {
      * @param submitted the object submitted
      * @return incorrect submission type feedback
      */
-    public static Feedback submissionTypeError(String expected, Serializable submitted) {
-        String text = String.format("ERROR: expected submission to be a %s, but got a %s", expected, submitted.getClass());
+    public static <T> Feedback submissionTypeError(Class<T> expected, Serializable submitted) {
+        String text = String.format("ERROR: expected submission to be a %s, but got a %s", expected.getSimpleName(), submitted.getClass().getSimpleName());
         return new Feedback(text, false);
     }
 

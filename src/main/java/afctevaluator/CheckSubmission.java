@@ -313,7 +313,7 @@ public class CheckSubmission {
         switch (answer) {
             case FiniteStateAutomaton answerFSA -> {
                 if (!(submitted instanceof FiniteStateAutomaton submittedFSA)) {
-                    return Feedback.submissionTypeError(FiniteStateAutomaton.class.getName(), submitted);
+                    return Feedback.submissionTypeError(FiniteStateAutomaton.class, submitted);
                 }
                 if (deterministic && !Grader.isSipserDFA(submittedFSA)) {
                     return new Feedback("Your submission is not deterministic.", false);
@@ -324,13 +324,13 @@ public class CheckSubmission {
             }
             case RegularExpression answerRE -> {
                 if (!(submitted instanceof RegularExpression submittedRE)) {
-                    return Feedback.submissionTypeError(RegularExpression.class.getName(), submitted);
+                    return Feedback.submissionTypeError(RegularExpression.class, submitted);
                 }
                 return handleRE(answerRE, submittedRE);
             }
             case ContextFreeGrammar answerCFG -> {
                 if (!(submitted instanceof ContextFreeGrammar submittedCFG)) {
-                    return Feedback.submissionTypeError(ContextFreeGrammar.class.getName(), submitted);
+                    return Feedback.submissionTypeError(ContextFreeGrammar.class, submitted);
                 }
                 if (!GrammarChecker.isContextFreeGrammar(submittedCFG)) {
                     return new Feedback("Your grammar is not context-free.", false);
@@ -349,7 +349,7 @@ public class CheckSubmission {
             }
             case PushdownAutomaton answerPDA -> {
                 if (!(submitted instanceof PushdownAutomaton submittedPDA)) {
-                    return Feedback.submissionTypeError(PushdownAutomaton.class.getName(), submitted);
+                    return Feedback.submissionTypeError(PushdownAutomaton.class, submitted);
                 }
                 if ((maxStates > 0) && (submittedPDA.getStates().length > maxStates)) {
                     return Feedback.tooManyStates(maxStates, submittedPDA.getStates().length);
@@ -357,7 +357,7 @@ public class CheckSubmission {
                 return handlePDA(answerPDA, submittedPDA);
             }
             default -> {
-                String error = String.format("ERROR: %s is an unsupported answer type!", answer.getClass());
+                String error = String.format("ERROR: %s is an unsupported answer type!", answer.getClass().getSimpleName());
                 return Feedback.contactProfessorError(error);
             }
         }
