@@ -7,6 +7,8 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import static afctevaluator.CFGAnalyzerInterface.getStackTraceAsString;
+
 /**
  * The main AFCT-Evaluator class is run as afct-evaluator.jar, usage message is below in showHelp().
  *
@@ -167,7 +169,14 @@ public class Main {
     public static void main(String[] args) {
         handleArgs(args);
         CheckSubmission checkSubmission = new CheckSubmission();
-        Feedback feedback = checkSubmission.isCorrect(Main.answerFilePath, Main.submissionFilePath, Main.maxStates, Main.deterministic);
+        Feedback feedback;
+        try {
+            feedback = checkSubmission.isCorrect(Main.answerFilePath, Main.submissionFilePath, Main.maxStates, Main.deterministic);
+        } catch (Exception e) {
+            String feedbackMessage = "An error occurred while checking your answer. Please try again. If this occurs repeatedly, please contact your professor.";
+            String errorMessage = e.getMessage() + "\n" + getStackTraceAsString(e);;
+            feedback = new Feedback(feedbackMessage, false, errorMessage);
+        }
         feedback.addWarningsAndErrors(checkSubmission.warnings, checkSubmission.errors);
 
         if (Main.outputJson) {
