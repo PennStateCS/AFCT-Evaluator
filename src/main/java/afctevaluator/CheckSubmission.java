@@ -1,7 +1,10 @@
 package afctevaluator;
 
-import automata.State;
+import automata.*;
 import automata.fsa.FSATransition;
+import automata.turing.NDTMSimulator;
+import automata.turing.TMSimulator;
+import automata.turing.TuringMachine;
 import equivalence.EquivalenceNlgNWitness;
 import equivalence.Grader;
 import file.XMLCodec;
@@ -23,8 +26,11 @@ import gui.regular.REToFSAController;
 import regular.Discretizer;
 import regular.RegularExpression;
 
+import javax.swing.*;
+
 import static afctevaluator.CFGAnalyzerInterface.convertGrammar;
 import static afctevaluator.CFGAnalyzerInterface.gradeCFG;
+import static automata.SimulatorFactory.getSimulator;
 import static conversions.PDAToCFG.setupPDA;
 import static conversions.PDAToCFG.transformPDA;
 
@@ -184,6 +190,91 @@ public class CheckSubmission {
     }
 
     /**
+     * A helper method for checking if the given automaton accepts the given input.
+     *
+     * @param automaton the automaton to test
+     * @param input the object that represents the input; this is a String in most cases,
+     *              but may differ for multiple tape turing machines
+     * @return int >= 1 if the input is accepted, 0 if the input is rejected, -1 if the test ended early
+     */
+    private int testAcceptance(Automaton automaton, Object input) {
+        AutomatonSimulator simulator = getSimulator(automaton);
+
+        Configuration[] configs;
+
+        // Get the initial configurations.
+        if (automaton instanceof TuringMachine) {
+            String[] s = (String[]) input;
+            //check for nondeterminism
+            NondeterminismDetector d = NondeterminismDetectorFactory.getDetector(automaton);
+            State[] nd = d.getNondeterministicStates(automaton);
+            if(nd.length > 0) {
+                configs = ((NDTMSimulator) simulator).getInitialConfigurations(s);
+            } else {
+                configs = ((TMSimulator) simulator).getInitialConfigurations(s);
+            }
+        } else {
+            String s = (String) input;
+            configs = simulator.getInitialConfigurations(s);
+        }
+
+        // How many configurations have we had?
+        int numberGenerated = 0;
+        // How many have accepted?
+        int numberAccepted = 0;
+        while (configs.length > 0) {
+            numberGenerated += configs.length;
+
+            // Make sure we should continue.
+            if (numberGenerated >= 1000) {
+                // TODO: determine a better way to handle lots of configs than just stopping after 1000
+                //  that still avoids infinite loops...
+                return -1;
+            }
+
+            // Get the next batch of configurations.
+            ArrayList<Configuration> next = new ArrayList<>();
+            for (Configuration config : configs) {
+                if (config.isAccept()) {
+                    numberAccepted++;
+                    break;
+                } else {
+                    next.addAll(simulator.stepConfiguration(config));
+                }
+            }
+            configs = next.toArray(new Configuration[0]);
+        }
+
+        return numberAccepted;
+    }
+
+    /**
+     * A helper method for determining if the given witness string should or should not be accepted.
+     *
+     * @param answer the correct automaton
+     * @param submitted the (incorrect) submitted automaton
+     * @param witness the witness string
+     * @return int >= 1 if the input should be accepted, 0 if the input should be rejected, -1 if the test ended early
+     */
+    private int determineWitnessType(Automaton answer, Automaton submitted, Object witness) {
+        int answerResult = testAcceptance(answer, witness);
+
+        if (answerResult == -1) {
+            int submissionResult = testAcceptance(submitted, witness);
+
+            if (submissionResult == -1) {
+                return -1;
+            } else if (submissionResult == 0) {
+                answerResult = 1;
+            } else {
+                answerResult = 0;
+            }
+        }
+
+        return answerResult;
+    }
+
+    /**
      * A helper method that checks if the submitted Finite State Automaton (FSA) is equivalent to the answer FSA, and
      * returns corresponding feedback.
      *
@@ -203,10 +294,25 @@ public class CheckSubmission {
             String witness = grader.getWitness();
             feedback = "Your answer is incorrect. ";
 
-            if (witness.contentEquals("")) {
-                feedback = feedback + "The empty string is an example.";
+            int witnessType = determineWitnessType(answerFSA, submittedFSA, witness);
+            if (witnessType == -1) {
+                if (witness.contentEquals("")) {
+                    feedback = feedback + "The empty string is an example.";
+                } else {
+                    feedback = feedback + "The string \"" + witness + "\" is an example.";
+                }
+            } else if (witnessType == 0) {
+                if (witness.contentEquals("")) {
+                    feedback = feedback + "The empty string should NOT be accepted.";
+                } else {
+                    feedback = feedback + "The string \"" + witness + "\" should NOT be accepted.";
+                }
             } else {
-                feedback = feedback + "The string \"" + witness + "\" is an example.";
+                if (witness.contentEquals("")) {
+                    feedback = feedback + "The empty string SHOULD be accepted.";
+                } else {
+                    feedback = feedback + "The string \"" + witness + "\" SHOULD be accepted.";
+                }
             }
         }
 
