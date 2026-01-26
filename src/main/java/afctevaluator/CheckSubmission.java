@@ -7,6 +7,7 @@ import automata.turing.TMSimulator;
 import automata.turing.TuringMachine;
 import equivalence.EquivalenceNlgNWitness;
 import equivalence.Grader;
+import file.DataException;
 import file.XMLCodec;
 
 import java.awt.*;
@@ -139,7 +140,7 @@ public class CheckSubmission {
      * @param file the File object to decode
      * @return the object resulting from decoding the given file, or null if the file is not a .jff file
      */
-    public Serializable decode(File file) {
+    public Serializable decode(File file) throws DataException {
         if (!file.getName().endsWith(".jff")) {
             return null;
         }
@@ -152,7 +153,7 @@ public class CheckSubmission {
      * @param filePath the path to the file to read in and decode
      * @return the object resulting from decoding the given file, or null if the file is not a .jff file
      */
-    public Serializable readAndDecode(String filePath) {
+    public Serializable readAndDecode(String filePath) throws DataException {
         File file = new File(filePath);
         return this.decode(file);
     }
@@ -168,9 +169,14 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     public Feedback isCorrect(String answerFilePath, String submissionFilePath, int maxStates, boolean deterministic) {
-        Serializable answer = readAndDecode(answerFilePath);
-        Serializable submitted = readAndDecode(submissionFilePath);
-        return this.isCorrect(answer, submitted, maxStates, deterministic);
+        try {
+            Serializable answer = readAndDecode(answerFilePath);
+            Serializable submitted = readAndDecode(submissionFilePath);
+            return this.isCorrect(answer, submitted, maxStates, deterministic);
+        } catch (DataException e) {
+            String feedback = "Error: " + e.getMessage();
+            return new Feedback(feedback, false, feedback);
+        }
     }
 
     /**
