@@ -174,7 +174,7 @@ public class Main {
             feedback = checkSubmission.isCorrect(Main.answerFilePath, Main.submissionFilePath, Main.maxStates, Main.deterministic);
         } catch (Exception e) {
             String feedbackMessage = "An error occurred while checking your answer. Please try again. If this occurs repeatedly, please contact your professor.";
-            String errorMessage = e.getMessage() + "\n" + getStackTraceAsString(e);;
+            String errorMessage = e.getMessage() + "\n" + getStackTraceAsString(e);
             feedback = new Feedback(feedbackMessage, false, errorMessage);
         }
         feedback.addWarningsAndErrors(checkSubmission.warnings, checkSubmission.errors);

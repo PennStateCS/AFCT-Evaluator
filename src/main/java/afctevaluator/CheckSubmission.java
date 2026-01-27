@@ -29,8 +29,7 @@ import regular.RegularExpression;
 
 import javax.swing.*;
 
-import static afctevaluator.CFGAnalyzerInterface.convertGrammar;
-import static afctevaluator.CFGAnalyzerInterface.gradeCFG;
+import static afctevaluator.CFGAnalyzerInterface.*;
 import static automata.SimulatorFactory.getSimulator;
 import static conversions.PDAToCFG.setupPDA;
 import static conversions.PDAToCFG.transformPDA;
@@ -175,7 +174,8 @@ public class CheckSubmission {
             return this.isCorrect(answer, submitted, maxStates, deterministic);
         } catch (DataException e) {
             String feedback = "Error: " + e.getMessage();
-            return new Feedback(feedback, false, feedback);
+            String errorMessage = e.getMessage() + "\n" + getStackTraceAsString(e);;
+            return new Feedback(feedback, false, errorMessage);
         }
     }
 
