@@ -15,6 +15,7 @@ public class Feedback {
     public boolean correct;
     public ArrayList<String> warnings;
     public ArrayList<String> errors;
+    public String version = Feedback.class.getPackage().getImplementationVersion();
 
 
     /**

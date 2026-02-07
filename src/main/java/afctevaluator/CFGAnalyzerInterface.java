@@ -110,6 +110,7 @@ public class CFGAnalyzerInterface {
 
     public static String getStackTraceAsString(Throwable throwable) {
         StringBuilder sb = new StringBuilder();
+        sb.append(throwable.getMessage()).append("\n");
         for (StackTraceElement element : throwable.getStackTrace()) {
             sb.append(element.toString()).append("\n");
         }
@@ -131,9 +132,17 @@ public class CFGAnalyzerInterface {
             }
         } catch (IOException e) {
             error = getStackTraceAsString(e);
+            Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer error!");
+            //Feedback errorFeedback = Feedback.contactProfessorError(error);
+            errorFeedback.errors.add(error);
+            return errorFeedback;
             //e.printStackTrace();
         } catch (InterruptedException ie) {
             error = getStackTraceAsString(ie);
+            Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer timed out!");
+            //Feedback errorFeedback = Feedback.contactProfessorError(error);
+            errorFeedback.errors.add(error);
+            return errorFeedback;
             //ie.printStackTrace();
         }
 

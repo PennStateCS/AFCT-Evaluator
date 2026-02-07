@@ -174,7 +174,7 @@ public class CheckSubmission {
             return this.isCorrect(answer, submitted, maxStates, deterministic);
         } catch (DataException e) {
             String feedback = "Error: " + e.getMessage();
-            String errorMessage = e.getMessage() + "\n" + getStackTraceAsString(e);;
+            String errorMessage = getStackTraceAsString(e);;
             return new Feedback(feedback, false, errorMessage);
         }
     }
@@ -263,6 +263,7 @@ public class CheckSubmission {
      * @return int >= 1 if the input should be accepted, 0 if the input should be rejected, -1 if the test ended early
      */
     private int determineWitnessType(Automaton answer, Automaton submitted, Object witness) {
+        // TODO: make this also work with CFGs!
         int answerResult = testAcceptance(answer, witness);
 
         if (answerResult == -1) {
@@ -378,6 +379,13 @@ public class CheckSubmission {
         return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
     }
 
+    private Feedback handleGrammar(Grammar answer, Grammar submitted) {
+        String answerStr = convertGrammar(answer);
+        String submittedStr = convertGrammar(submitted);
+
+        return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+    }
+
     /**
      * A helper method for converting a Pushdown Automaton (PDA) into a Context Free Grammar (CFG).
      *
@@ -458,6 +466,12 @@ public class CheckSubmission {
                     return new Feedback(feedback, false);
                 }
                 return handleCFG(answerCFG, submittedCFG);
+            }
+            case Grammar answerGrammar -> {
+                if (!(submitted instanceof Grammar submittedGrammar)) {
+                    return Feedback.submissionTypeError(ContextFreeGrammar.class, submitted);
+                }
+                return handleGrammar(answerGrammar, submittedGrammar);
             }
             case PushdownAutomaton answerPDA -> {
                 if (!(submitted instanceof PushdownAutomaton submittedPDA)) {
