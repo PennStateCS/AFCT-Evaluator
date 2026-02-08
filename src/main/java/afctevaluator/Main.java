@@ -26,7 +26,7 @@ public class Main {
      */
     private static void showHelp() {
         String helpMessage = """
-                usage: afct-evaluator.jar [-h] [-j] answerFilePath submissionFilePath [maxStates] [deterministic]
+                usage: afct-evaluator.jar [-h] [-v] [-j] answerFilePath submissionFilePath [maxStates] [deterministic]
                                 
                 positional arguments:
                     answerFilePath          path to the file with the correct answer
@@ -38,6 +38,7 @@ public class Main {
                                 
                 options:
                     -h, --help              show this help message and exit
+                    -v, --version           show the afct evaluator version and exit
                     -j, --json              display output in JSON format
                 """;
         System.out.println(helpMessage);
@@ -113,6 +114,24 @@ public class Main {
 
         if (argList.contains("-h") || argList.contains("--help")) {
             showHelp();
+            System.exit(0);
+        }
+
+        if (argList.contains("-vj") || argList.contains("-jv")) {
+            Gson gson = new Gson();
+            String json = gson.toJson(new Version());
+            System.out.println(json);
+            System.exit(0);
+        }
+
+        if (argList.contains("-v") || argList.contains("--version")) {
+            if (argList.contains("-j") || argList.contains("--json")) {
+                Gson gson = new Gson();
+                String json = gson.toJson(new Version());
+                System.out.println(json);
+            } else {
+                System.out.println(Main.class.getPackage().getImplementationVersion());
+            }
             System.exit(0);
         }
 
