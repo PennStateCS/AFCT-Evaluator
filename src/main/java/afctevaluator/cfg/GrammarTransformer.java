@@ -1,6 +1,7 @@
 package afctevaluator.cfg;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 import automata.vdg.VariableDependencyGraph;
