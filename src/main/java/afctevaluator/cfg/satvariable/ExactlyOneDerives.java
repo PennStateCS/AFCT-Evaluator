@@ -9,4 +9,4 @@ package afctevaluator.cfg.satvariable;
  * variable B(j) is used as an auxiliary variable to encode the constraints for starting nonterminals in
    the intersection and inclusion problem
  */
-public record ExactlyOneDerives(boolean targetGrammarProduces, int targetLength) implements SatVariable {}
+public record ExactlyOneDerives(boolean submissionShouldProduce, int targetLength) implements SatVariable {}

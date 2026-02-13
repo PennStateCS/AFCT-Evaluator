@@ -2,6 +2,7 @@ package afctevaluator.cfg;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -115,6 +116,8 @@ public class GrammarEqualityChecker {
         constraints.addAll(uniqueSymbolsConstraint(length));
         constraints.addAll(topDownComposition(false, length));
         constraints.addAll(topDownComposition(true, length));
+        constraints.addAll(bottomUpComposition(true, length));
+        constraints.addAll(bottomUpComposition(false, length));
         // TODO: import SAT
         return null;
     }
@@ -161,10 +164,12 @@ public class GrammarEqualityChecker {
     }
 
     /**
-     * 
-     * @param isTargetGrammar
-     * @param length
-     * @return
+     * Construct the top-down rules for one of the two grammars. This converts
+     * all of the production rules for the ChomNF grammar into ConjNF logical
+     * statements. 
+     * @param isTargetGrammar Whether to use the target grammar. 
+     * @param length How long the strings we are considering should be.
+     * @return A set of CNF constraints that enforce the grammar rules.
      */
     private List<List<Integer>> topDownComposition(boolean isTargetGrammar, int length) {
         List<List<Integer>> constraints = new ArrayList<>();
@@ -192,6 +197,18 @@ public class GrammarEqualityChecker {
         return constraints;
     }
 
+    /**
+     * Perform the top-down step for a nonterminal at a given position. 
+     * @param input The input nonterminal. 
+     * @param outputs A list of all possible things that nonterminal
+     *                can produce. Either a single terminal or exactly two
+     *                nonterminals. 
+     * @param start The start of the range this nonterminal is expected to fill
+     * @param end The end of the range this nonterminal is expected to fill
+     * @param isTargetGrammar If the grammar this symbol comes from is 
+     *                        the target grammar.
+     * @return All possible CNF rules required to encode this grammar rule.
+     */
     private List<List<Integer>> singleTopDownStep(String input, List<List<String>> outputs, int start, int end, boolean isTargetGrammar) {
         
         List<List<Integer>> allProductionRules = new ArrayList<>();
@@ -208,7 +225,8 @@ public class GrammarEqualityChecker {
                 }
                 continue;
             }
-            if (output.size() != 2) throw new RuntimeException("The list " + output + " was expected to be CNF, but isn't!");
+            assert output.size() == 2;
+
             String first = output.get(0);
             String second = output.get(1);
             for (int mid = start; mid < end; mid++) {
@@ -235,5 +253,117 @@ public class GrammarEqualityChecker {
         allProductionRules.add(inputProductionRule);
 
         return allProductionRules;
+    }
+
+    /**
+     * Construct the bottom-up rules for one of the two grammars. This ensures
+     * that, if a string is considered valid by SAT, it can follow the rules
+     * required to prove it. 
+     * @param isTargetGrammar Whether to use the target grammar. 
+     * @param length How long the strings we are considering should be. 
+     * @return A set of CNF constraints that enforce the String generation rule
+     */
+    private List<List<Integer>> bottomUpComposition(boolean isTargetGrammar, int length) {
+        List<List<Integer>> constraints = new ArrayList<>();
+        Grammar g = isTargetGrammar ? targetGrammar : submittedGrammar;
+
+        for (int start = 0; start < length; start++) {
+            for (int end = start; end < length; end++) {
+                // Possible optimization?: if rule is terminal, skip the start-end nonsense. 
+                for (Production rule : g.getProductions()) {
+                    constraints.addAll(singleBottomUpStep(rule, start, end, isTargetGrammar));
+                }
+            }
+        }
+
+        return constraints;
+    }
+
+    /**
+     * Perform the bottom-up step for a single rule at a given position.
+     * @param rule The rule to deal with.
+     * @param start The start of the range of symbols that the production
+     *              eventually spans. 
+     * @param end The end of the range of symbols the production eventulaly
+     *            spans. 
+     * @param isTargetGrammar If the grammar this rule comes from is the target grammar. 
+     * @return All possible CNF rules required to encode this grammar rule.
+     */
+    private List<List<Integer>> singleBottomUpStep(Production rule, int start, int end, boolean isTargetGrammar) {
+        String lhs = rule.getLHS();
+        String[] rhs = CNFConverter.separateString(rule.getRHS());
+
+        // ASSUMPTION (TODO: Resolve before PR): 
+        //  all JFLAP ChomNF rules either produce 2 nonterminals or 1 terminal.
+        if (rhs.length == 1) {
+            if (start != end) return Collections.<List<Integer>>emptyList();
+            String terminal = rhs[0];
+            // Nonterminal(lhs, pos) <-- Terminal(T, pos)
+            // N(lhs, pos) v !T(pos)
+            return List.of(List.of(
+                sat.encodeNegative(new Terminal(terminal, end)),
+                sat.encodePositive(new Nonterminal(isTargetGrammar, lhs, start, end))
+            ));
+        }
+
+        assert rhs.length == 2;
+        String first = rhs[0];
+        String second = rhs[0];
+        List<List<Integer>> constraint = new ArrayList<>();
+
+        for (int mid = start; mid < end; mid++) {
+            // lhs <-- rhs1 and rhs2
+            // lhs v !rhs1 v !rhs2
+            constraint.add(List.of(
+                sat.encodePositive(new Nonterminal(isTargetGrammar, lhs, start, end)),
+                sat.encodeNegative(new Nonterminal(isTargetGrammar, first, start, mid)),
+                sat.encodeNegative(new Nonterminal(isTargetGrammar, second, mid+1, end))
+            ));
+        }
+
+        return constraint;
+    }
+
+    /**
+     * Construct the derivation limitation rules for the grammars. 
+     * If exactly one of the grammars can produce a string, then this will
+     * allow the program to resolve to SAT. Otherwise, UNSAT indicates that the
+     * grammars are equal to this length. 
+     * @param length The length of strings we are checking for. 
+     * @return A set of CNF constraints that enforce exactly one grammar
+     *         producing a string. 
+     */
+    private List<List<Integer>> exactlyOneCfgProducesAStringComposition(int length) {
+        List<List<Integer>> implication = new ArrayList<>();
+        String submittedStart = submittedGrammar.getStartVariable();
+        String targetStart = targetGrammar.getStartVariable();
+
+        // Sub should produce --> target produces AND submission doesn't
+        implication.add(List.of(
+            sat.encodeNegative(new ExactlyOneDerives(true, length)),
+            sat.encodePositive(new Nonterminal(true, submittedStart, 0, length))
+        ));
+        implication.add(List.of(
+            sat.encodeNegative(new ExactlyOneDerives(true, length)),
+            sat.encodeNegative(new Nonterminal(false, targetStart, 0, length))
+        ));
+
+        // Sub should NOT produce --> target produces AND submission doesn't
+        implication.add(List.of(
+            sat.encodeNegative(new ExactlyOneDerives(false, length)),
+            sat.encodeNegative(new Nonterminal(true, submittedStart, 0, length))
+        ));
+        implication.add(List.of(
+            sat.encodeNegative(new ExactlyOneDerives(false, length)),
+            sat.encodePositive(new Nonterminal(false, targetStart, 0, length))
+        ));
+
+        // For SAT, either a) target should produce something, or b) submission produces something it shouldn't.
+        implication.add(List.of(
+            sat.encodePositive(new ExactlyOneDerives(true, length)),
+            sat.encodePositive(new ExactlyOneDerives(false, length))
+        ));
+
+        return implication;
     }
 }
