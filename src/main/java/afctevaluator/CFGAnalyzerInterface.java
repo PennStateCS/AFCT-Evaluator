@@ -128,7 +128,7 @@ public class CFGAnalyzerInterface {
             Process p = pb.start();
 
             if (p.waitFor() != 2) {
-                feedback = p.getInputStream().toString();
+                feedback = new String(p.getInputStream().readAllBytes());
             }
         } catch (IOException e) {
             error = getStackTraceAsString(e);
