@@ -18,4 +18,8 @@ public class SatMapper {
     public Integer encodeNegative(SatVariable s) {
         return -variableMap.computeIfAbsent(s, ignored -> variableMap.size());
     }
+
+    public int maxVar() {
+        return variableMap.size();
+    }
 }

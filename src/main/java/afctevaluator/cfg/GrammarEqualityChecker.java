@@ -12,6 +12,13 @@ import grammar.CNFConverter;
 import grammar.Grammar;
 import grammar.LambdaProductionRemover;
 import grammar.Production;
+import org.sat4j.core.*;
+import org.sat4j.minisat.SolverFactory;
+import org.sat4j.specs.ContradictionException;
+import org.sat4j.specs.IProblem;
+import org.sat4j.specs.ISolver;
+import org.sat4j.specs.IVecInt;
+import org.sat4j.specs.TimeoutException;
 
 /**
  * Determine if two CFGs are equivalent, using SAT reduction. 
@@ -119,6 +126,29 @@ public class GrammarEqualityChecker {
         constraints.addAll(bottomUpComposition(true, length));
         constraints.addAll(bottomUpComposition(false, length));
         // TODO: import SAT
+        ISolver solver = SolverFactory.newDefault();
+        solver.newVar(sat.maxVar());
+        solver.setExpectedNumberOfClauses(constraints.size());
+
+        try {
+            for (List<Integer> clause : constraints) {
+                IVecInt formattedClause = new VecInt(clause.stream().mapToInt(Integer::intValue).toArray());
+                solver.addClause(formattedClause);
+            }
+        } catch (ContradictionException e) {
+            // Indicates a trivial contradiction -- impossible?
+            System.out.println("Trivial Contradiction detected...?");
+            return null; 
+        }
+
+        IProblem problem = solver;
+        try {
+            if (problem.isSatisfiable()) {
+                return new Witness("todo", false);
+            }
+        } catch (TimeoutException impossible) {}
+
+
         return null;
     }
 
