@@ -12,7 +12,8 @@ import grammar.CNFConverter;
 import grammar.Grammar;
 import grammar.LambdaProductionRemover;
 import grammar.Production;
-import org.sat4j.core.*;
+
+import org.sat4j.core.VecInt;
 import org.sat4j.minisat.SolverFactory;
 import org.sat4j.specs.ContradictionException;
 import org.sat4j.specs.IProblem;
@@ -43,6 +44,8 @@ import org.sat4j.specs.TimeoutException;
  * before SAT processing.
  */
 public class GrammarEqualityChecker {
+
+    private static final boolean DEBUG = false;
     
     private Grammar submittedGrammar;
     private Grammar targetGrammar;
@@ -66,7 +69,9 @@ public class GrammarEqualityChecker {
 
         Witness witness = null;
         // lmao
-        for (int length = 1; witness == null && length <= 20; witness = findInequalityWitness(length++));
+        for (int length = 1; witness == null && length <= 25; length++) {
+            witness = findInequalityWitness(length);
+        }
 
         if (witness == null) {
             return new Feedback("Correct!", true);
@@ -125,26 +130,29 @@ public class GrammarEqualityChecker {
         constraints.addAll(topDownComposition(true, length));
         constraints.addAll(bottomUpComposition(true, length));
         constraints.addAll(bottomUpComposition(false, length));
-        // TODO: import SAT
+        constraints.addAll(exactlyOneCfgProducesConstraint(length));
+
         ISolver solver = SolverFactory.newDefault();
         solver.newVar(sat.maxVar());
         solver.setExpectedNumberOfClauses(constraints.size());
 
         try {
+            // Consider retconning everything below this function to use Sat4J's impl of vecint.
             for (List<Integer> clause : constraints) {
                 IVecInt formattedClause = new VecInt(clause.stream().mapToInt(Integer::intValue).toArray());
+                //System.out.println(clause);
                 solver.addClause(formattedClause);
             }
         } catch (ContradictionException e) {
             // Indicates a trivial contradiction -- impossible?
-            System.out.println("Trivial Contradiction detected...?");
+            System.err.println("Trivial Contradiction detected...?");
             return null; 
         }
 
         IProblem problem = solver;
         try {
             if (problem.isSatisfiable()) {
-                return new Witness("todo", false);
+                return new Witness("todo: failed at length " + length, false);
             }
         } catch (TimeoutException impossible) {}
 
@@ -167,8 +175,13 @@ public class GrammarEqualityChecker {
         String[] alphabet = targetGrammar.getTerminals();
 
         for (int position = 0; position < length; position++) {
+            List<Integer> requireSomethingHere = new ArrayList<>();
             for (String terminal : alphabet) {
+                requireSomethingHere.add(sat.encodePositive(new Terminal(terminal, position)));
                 // If a terminal here is forbidden, then it cannot be in the solution.
+                if (DEBUG) {
+                    System.out.println(new ForbidsTerminal(terminal, position) + " -> -" + new Terminal(terminal, position));
+                }
                 // Forbids(t, pos) --> -Terminal(t, pos)
                 constraints.add(List.of(
                     sat.encodeNegative(new Terminal(terminal, position)),
@@ -177,17 +190,21 @@ public class GrammarEqualityChecker {
 
                 for (String otherTerminal : alphabet) {
                     if (otherTerminal.equals(terminal)) continue;
-
                     // If some other terminal is in this position, it forbids this one.
                     // Terminal(t1, pos) --> Forbids(t2, pos)
                     // Essentially, it's "B here --> Not A and Not B and Not C and ..."
                     // but it has to be written this way. 
+                    if (DEBUG) {
+                        System.out.println(new Terminal(otherTerminal, position) + " -> " + new ForbidsTerminal(terminal, position));
+                    }
+
                     constraints.add(List.of(
                         sat.encodePositive(new ForbidsTerminal(terminal, position)),
                         sat.encodeNegative(new Terminal(otherTerminal, position))
                     ));
                 }
             }
+            constraints.add(requireSomethingHere);
         }
 
         return constraints;
@@ -210,6 +227,7 @@ public class GrammarEqualityChecker {
         // The way Grammar is represented is fine for a column table,
         // but we care about having a comprehensive output list for an input.
         for (Production rule : g.getProductions()) {
+           //if (CNFConverter.separateString(rule.getRHS()).length == 0) continue;
             productionMap
                     .computeIfAbsent(rule.getLHS(), ignored -> new ArrayList<>())
                     .add(Arrays.asList(CNFConverter.separateString(rule.getRHS())));
@@ -247,22 +265,32 @@ public class GrammarEqualityChecker {
         
         
         for (List<String> output : outputs) {
-            // ASSUMPTION (TODO: Resolve before PR): 
-            //  all JFLAP ChomNF rules either produce 2 nonterminals or 1 terminal.
             if (output.size() == 1) {
                 if (start == end) {
+                    if (DEBUG) {
+                        System.out.println(new Nonterminal(isTargetGrammar, input, start, end) + " ->? " + new Terminal(output.get(0), end));
+                    }
                     inputProductionRule.add(sat.encodePositive(new Terminal(output.get(0), end)));
                 }
                 continue;
             }
-            assert output.size() == 2;
+            if (output.size() != 2) {
+                throw new IllegalArgumentException("A production rule starting with " + input + " yields nothing??? ");
+            }
 
             String first = output.get(0);
             String second = output.get(1);
             for (int mid = start; mid < end; mid++) {
                 SplitProduction h = new SplitProduction(isTargetGrammar, first, second, start, end, mid);
+                if (DEBUG) {
+                    System.out.println(new Nonterminal(isTargetGrammar, input, start, end) + " ->? " + h);
+                }
                 inputProductionRule.add(sat.encodePositive(h));
                 
+                if (DEBUG) {
+                    System.out.println(h + " -> " + new Nonterminal(isTargetGrammar, first, start, mid));
+                    System.out.println(h + " -> " + new Nonterminal(isTargetGrammar, second, mid+1, end));
+                }
                 // Split(fst, snd, i, j, k) --> NonTerminal(fst, i, j) AND NonTerminal(snd, j, k).
                 allProductionRules.add(List.of(
                     sat.encodeNegative(h),
@@ -273,9 +301,6 @@ public class GrammarEqualityChecker {
                     sat.encodeNegative(h),
                     sat.encodePositive(new Nonterminal(isTargetGrammar, second, mid+1, end))
                 ));
-                // I'm not sure if this is a CYK implementation. 
-                //  If I later learn that this can be reduced to CYK somehow for guaranteed O(n^4), 
-                //  I'm gonna be mad.
             }
             // We are deliberately ignoring the case of A --> BC and B/C --> e,
             //  because ChomNF completely nullifies it.
@@ -323,13 +348,14 @@ public class GrammarEqualityChecker {
         String lhs = rule.getLHS();
         String[] rhs = CNFConverter.separateString(rule.getRHS());
 
-        // ASSUMPTION (TODO: Resolve before PR): 
-        //  all JFLAP ChomNF rules either produce 2 nonterminals or 1 terminal.
         if (rhs.length == 1) {
             if (start != end) return Collections.<List<Integer>>emptyList();
             String terminal = rhs[0];
             // Nonterminal(lhs, pos) <-- Terminal(T, pos)
             // N(lhs, pos) v !T(pos)
+            if (DEBUG) {
+                System.out.println(new Terminal(terminal, end) + " -> " + new Nonterminal(isTargetGrammar, lhs, start, end));
+            }
             return List.of(List.of(
                 sat.encodeNegative(new Terminal(terminal, end)),
                 sat.encodePositive(new Nonterminal(isTargetGrammar, lhs, start, end))
@@ -344,6 +370,13 @@ public class GrammarEqualityChecker {
         for (int mid = start; mid < end; mid++) {
             // lhs <-- rhs1 and rhs2
             // lhs v !rhs1 v !rhs2
+            if (DEBUG) {
+                System.out.println(
+                    "(" + new Nonterminal(isTargetGrammar, first, start, mid) + 
+                    " AND " + new Nonterminal(isTargetGrammar, second, mid+1, end) + 
+                    ") -> " + new Nonterminal(isTargetGrammar, lhs, start, end)
+                );
+            }
             constraint.add(List.of(
                 sat.encodePositive(new Nonterminal(isTargetGrammar, lhs, start, end)),
                 sat.encodeNegative(new Nonterminal(isTargetGrammar, first, start, mid)),
@@ -363,7 +396,7 @@ public class GrammarEqualityChecker {
      * @return A set of CNF constraints that enforce exactly one grammar
      *         producing a string. 
      */
-    private List<List<Integer>> exactlyOneCfgProducesAStringComposition(int length) {
+    private List<List<Integer>> exactlyOneCfgProducesConstraint(int length) {
         List<List<Integer>> implication = new ArrayList<>();
         String submittedStart = submittedGrammar.getStartVariable();
         String targetStart = targetGrammar.getStartVariable();
@@ -371,21 +404,21 @@ public class GrammarEqualityChecker {
         // Sub should produce --> target produces AND submission doesn't
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(true, length)),
-            sat.encodePositive(new Nonterminal(true, submittedStart, 0, length))
+            sat.encodePositive(new Nonterminal(true, submittedStart, 0, length-1))
         ));
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(true, length)),
-            sat.encodeNegative(new Nonterminal(false, targetStart, 0, length))
+            sat.encodeNegative(new Nonterminal(false, targetStart, 0, length-1))
         ));
 
         // Sub should NOT produce --> target produces AND submission doesn't
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(false, length)),
-            sat.encodeNegative(new Nonterminal(true, submittedStart, 0, length))
+            sat.encodeNegative(new Nonterminal(true, submittedStart, 0, length-1))
         ));
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(false, length)),
-            sat.encodePositive(new Nonterminal(false, targetStart, 0, length))
+            sat.encodePositive(new Nonterminal(false, targetStart, 0, length-1))
         ));
 
         // For SAT, either a) target should produce something, or b) submission produces something it shouldn't.
@@ -393,6 +426,13 @@ public class GrammarEqualityChecker {
             sat.encodePositive(new ExactlyOneDerives(true, length)),
             sat.encodePositive(new ExactlyOneDerives(false, length))
         ));
+
+        if (DEBUG) {
+            System.out.println(new ExactlyOneDerives(true, length) + " -> " + new Nonterminal(true, submittedStart, 0, length-1));
+            System.out.println(new ExactlyOneDerives(true, length) + " -> !" + new Nonterminal(false, submittedStart, 0, length-1));
+            System.out.println(new ExactlyOneDerives(false, length) + " -> !" + new Nonterminal(true, submittedStart, 0, length-1));
+            System.out.println(new ExactlyOneDerives(false, length) + " -> " + new Nonterminal(false, submittedStart, 0, length-1));
+        }
 
         return implication;
     }

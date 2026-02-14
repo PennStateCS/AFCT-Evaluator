@@ -13,7 +13,6 @@ import file.XMLCodec;
 import java.awt.*;
 import java.io.*;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import automata.fsa.FiniteStateAutomaton;
 import automata.pda.PushdownAutomaton;
@@ -27,7 +26,7 @@ import gui.regular.REToFSAController;
 import regular.Discretizer;
 import regular.RegularExpression;
 
-import javax.swing.*;
+import afctevaluator.cfg.GrammarEqualityChecker;
 
 import static afctevaluator.CFGAnalyzerInterface.*;
 import static automata.SimulatorFactory.getSimulator;
@@ -373,17 +372,25 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handleCFG(ContextFreeGrammar answer, ContextFreeGrammar submitted) {
-        String answerStr = convertGrammar(answer);
-        String submittedStr = convertGrammar(submitted);
-
-        return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+        if (false) {
+            String answerStr = convertGrammar(answer);
+            String submittedStr = convertGrammar(submitted);
+    
+            return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+        }
+        GrammarEqualityChecker checker = new GrammarEqualityChecker(submitted, answer);
+        return checker.checkEquality();
     }
 
     private Feedback handleGrammar(Grammar answer, Grammar submitted) {
-        String answerStr = convertGrammar(answer);
-        String submittedStr = convertGrammar(submitted);
-
-        return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+        if (false) {
+            String answerStr = convertGrammar(answer);
+            String submittedStr = convertGrammar(submitted);
+    
+            return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+        }
+        GrammarEqualityChecker checker = new GrammarEqualityChecker(submitted, answer);
+        return checker.checkEquality();
     }
 
     /**

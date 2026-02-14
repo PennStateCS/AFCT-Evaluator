@@ -1,7 +1,6 @@
 package afctevaluator.cfg;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 import automata.vdg.VariableDependencyGraph;
@@ -11,7 +10,6 @@ import grammar.LambdaProductionRemover;
 import grammar.Production;
 import grammar.UnitProductionRemover;
 import grammar.UselessProductionRemover;
-import grammar.cfg.ContextFreeGrammar;
 
 /**
  * Helper class to perform basic utilities that JFLAP/AFCT should have a single
@@ -22,12 +20,27 @@ import grammar.cfg.ContextFreeGrammar;
  */
 public class GrammarTransformer {
     
+    /**
+     * Convert a grammar to Chomsky Normal Form. 
+     * 
+     * Note that this will remove the empty string as a valid production.
+     * 
+     * Note that the resulting grammar will have nonterminals whose length may
+     * be longer than a single character, such as `B(1)`. Use 
+     * <code>CNFConverter.seperateString</code> to divide the string in such
+     *  cases. 
+     * @param g The grammar to convert.
+     * @return A grammar in Chomsky Normal Form, with the considerations listed
+     *         above.
+     */
     public static Grammar toChomsky(Grammar g) {
-        g = removeEmptyProductions(g);
-        g = reduceTransitiveProductions(g);
-        g = removeUselessRules(g);
-        g = convertToChomsky(g);
-        return g;
+        String start = g.getStartVariable();
+        String[] ends = g.getTerminals();
+        Grammar nonEmptyG = removeEmptyProductions(g);
+        Grammar nonTransitiveG = reduceTransitiveProductions(nonEmptyG);
+        // Grammar usefulG = removeUselessRules(nonTransitiveG);
+        Grammar chomskyG = convertToChomsky(nonTransitiveG, start, ends);
+        return chomskyG;
     }
 
     /**
@@ -77,12 +90,12 @@ public class GrammarTransformer {
      * @param g The grammar to perform this operation on. It is unaffected.
      * @return A grammar in Chomsky Normal Form, aka CNF aka 2NF. 
      */
-    private static Grammar convertToChomsky(Grammar g) {
+    private static Grammar convertToChomsky(Grammar g, String start, String[] ends) {
         // TODO: ensure that an IllegalArgumentException isn't thrown
         // CNFConverter:L270
-
+        g.setStartVariable(start);
         CNFConverter converter = new CNFConverter(g);
-        Grammar output = new ContextFreeGrammar();
+        ChomskyCFG output = new ChomskyCFG();
         output.addProductions(g.getProductions());
 
         // Based on the Chomsky pane because CNFConverter is terrible
@@ -103,6 +116,10 @@ public class GrammarTransformer {
                 }
             }
         } while (!notChomsky.isEmpty());
+
+        output.setStartVariable(start);
+        // This is why we created ChomskyCFG
+        output.overrideTerminals(ends);
 
         return output;
     }
