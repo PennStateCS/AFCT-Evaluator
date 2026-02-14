@@ -96,6 +96,15 @@ public class GrammarEqualityChecker {
     }
 
     private Feedback checkTrivialInequality() {
+
+        String[] targetAlphabet = targetGrammar.getTerminals();
+        String[] submittedAlphabet = submittedGrammar.getTerminals();
+        Arrays.sort(targetAlphabet);
+        Arrays.sort(submittedAlphabet);
+        if (!Arrays.equals(targetAlphabet, submittedAlphabet)) {
+            return new Feedback("Submission does not produce the correct Alphabet", false);
+        }
+
         LambdaProductionRemover emptyStringTester = new LambdaProductionRemover();
         boolean targetAllowsEmpty = emptyStringTester
                 .getCompleteLambdaSet(targetGrammar)
@@ -110,14 +119,6 @@ public class GrammarEqualityChecker {
                 return new Feedback("Submission does not produce the empty string", false);
             }
             return new Feedback("Submission should not produce the empty string", false);
-        }
-
-        String[] targetAlphabet = targetGrammar.getTerminals();
-        String[] submittedAlphabet = submittedGrammar.getTerminals();
-        Arrays.sort(targetAlphabet);
-        Arrays.sort(submittedAlphabet);
-        if (!Arrays.equals(targetAlphabet, submittedAlphabet)) {
-            return new Feedback("Submission does not produce the correct Alphabet", false);
         }
 
         return null;
@@ -152,7 +153,7 @@ public class GrammarEqualityChecker {
         IProblem problem = solver;
         try {
             if (problem.isSatisfiable()) {
-                return new Witness("todo: failed at length " + length, false);
+                return extractWitnessFromSat(problem, length);
             }
         } catch (TimeoutException impossible) {}
 
@@ -435,5 +436,20 @@ public class GrammarEqualityChecker {
         }
 
         return implication;
+    }
+
+    private Witness extractWitnessFromSat(IProblem problem, int length) {
+        String[] alphabet = targetGrammar.getTerminals();
+        String witness = "";
+        for (int position = 0; position < length; position++) {
+            for (String terminal : alphabet) {
+                if (problem.model(sat.encodePositive(new Terminal(terminal, position)))) {
+                    witness += terminal;
+                    continue;
+                }
+            }
+        }
+        boolean shouldBePresent = problem.model(sat.encodePositive(new ExactlyOneDerives(true, length)));
+        return new Witness(witness, shouldBePresent);
     }
 }

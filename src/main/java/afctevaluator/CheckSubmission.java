@@ -372,7 +372,7 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handleCFG(ContextFreeGrammar answer, ContextFreeGrammar submitted) {
-        if (false) {
+        if (true) {
             String answerStr = convertGrammar(answer);
             String submittedStr = convertGrammar(submitted);
     
@@ -383,7 +383,7 @@ public class CheckSubmission {
     }
 
     private Feedback handleGrammar(Grammar answer, Grammar submitted) {
-        if (false) {
+        if (true) {
             String answerStr = convertGrammar(answer);
             String submittedStr = convertGrammar(submitted);
     
