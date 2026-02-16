@@ -1,5 +1,6 @@
 package afctevaluator;
 
+import grammar.CNFConverter;
 import grammar.Grammar;
 import grammar.GrammarChecker;
 import grammar.Production;
@@ -11,7 +12,7 @@ public class CFGAnalyzerInterface {
     private static String quoteRHSTerminals(Production p) {
         String[] terminals = p.getTerminals();
         ArrayList<String> rhs = new ArrayList<>();
-        String[] symbols = p.getSymbolsOnRHS();
+        String[] symbols = CNFConverter.separateString(p.getRHS());
 
         for (String str : symbols) {
             boolean isTerm = false;
@@ -57,7 +58,7 @@ public class CFGAnalyzerInterface {
             });
 
             String lhs;
-            if (GrammarChecker.isContextFreeGrammar(g)) {
+            if (true || GrammarChecker.isContextFreeGrammar(g)) {
                 for (productionIterator = productions.iterator(); productionIterator.hasNext(); result.append(lhs).append(quoteRHSTerminals(p)).append(";\n")) {
                     p = productionIterator.next();
                     lhs = " : ";

@@ -45,7 +45,7 @@ import org.sat4j.specs.TimeoutException;
  */
 public class GrammarEqualityChecker {
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     
     private Grammar submittedGrammar;
     private Grammar targetGrammar;
@@ -69,7 +69,7 @@ public class GrammarEqualityChecker {
 
         Witness witness = null;
         // lmao
-        for (int length = 1; witness == null && length <= 25; length++) {
+        for (int length = 1; witness == null && length <= 3; length++) {
             witness = findInequalityWitness(length);
         }
 
@@ -82,9 +82,9 @@ public class GrammarEqualityChecker {
         String feedback = "Your Grammar is incorrect. The string \"";
         feedback += witness.mismatch;
         if (witness.missing) {
-            feedback += "\" cannot be produced.";
+            feedback += "\" SHOULD be produced.";
         } else {
-            feedback += "\" should not be producable.";
+            feedback += "\" should NOT be producable.";
         }
 
         return new Feedback(feedback, false);
@@ -102,7 +102,7 @@ public class GrammarEqualityChecker {
         Arrays.sort(targetAlphabet);
         Arrays.sort(submittedAlphabet);
         if (!Arrays.equals(targetAlphabet, submittedAlphabet)) {
-            return new Feedback("Submission does not produce the correct Alphabet", false);
+            return new Feedback("Submission does not produce the correct alphabet", false);
         }
 
         LambdaProductionRemover emptyStringTester = new LambdaProductionRemover();
@@ -116,15 +116,17 @@ public class GrammarEqualityChecker {
         if (targetAllowsEmpty ^ submissionAllowsEmpty) {
             // TODO: Make the output consistent.
             if (targetAllowsEmpty) {
-                return new Feedback("Submission does not produce the empty string", false);
+                return new Feedback("The empty string SHOULD be produced", false);
             }
-            return new Feedback("Submission should not produce the empty string", false);
+            return new Feedback("The empty string should NOT be producable", false);
         }
 
         return null;
     }
 
     public Witness findInequalityWitness(int length) {
+        System.out.println("Checking Equality. LENGTH = " + length);
+
         List<List<Integer>> constraints = new ArrayList<>();
         constraints.addAll(uniqueSymbolsConstraint(length));
         constraints.addAll(topDownComposition(false, length));
@@ -175,7 +177,7 @@ public class GrammarEqualityChecker {
         //  provide the same alphabet. That's trivially checkable. 
         String[] alphabet = targetGrammar.getTerminals();
 
-        for (int position = 0; position < length; position++) {
+        for (int position = 1; position <= length; position++) {
             List<Integer> requireSomethingHere = new ArrayList<>();
             for (String terminal : alphabet) {
                 requireSomethingHere.add(sat.encodePositive(new Terminal(terminal, position)));
@@ -234,8 +236,8 @@ public class GrammarEqualityChecker {
                     .add(Arrays.asList(CNFConverter.separateString(rule.getRHS())));
         }
 
-        for (int start = 0; start < length; start++) {
-            for (int end = start; end < length; end++) {
+        for (int start = 1; start <= length; start++) {
+            for (int end = start; end <= length; end++) {
                 for (String input : productionMap.keySet()) {
                     constraints.addAll(
                         singleTopDownStep(input, productionMap.get(input), start, end, isTargetGrammar)
@@ -323,8 +325,8 @@ public class GrammarEqualityChecker {
         List<List<Integer>> constraints = new ArrayList<>();
         Grammar g = isTargetGrammar ? targetGrammar : submittedGrammar;
 
-        for (int start = 0; start < length; start++) {
-            for (int end = start; end < length; end++) {
+        for (int start = 1; start <= length; start++) {
+            for (int end = start; end <= length; end++) {
                 // Possible optimization?: if rule is terminal, skip the start-end nonsense. 
                 for (Production rule : g.getProductions()) {
                     constraints.addAll(singleBottomUpStep(rule, start, end, isTargetGrammar));
@@ -405,21 +407,21 @@ public class GrammarEqualityChecker {
         // Sub should produce --> target produces AND submission doesn't
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(true, length)),
-            sat.encodePositive(new Nonterminal(true, submittedStart, 0, length-1))
+            sat.encodePositive(new Nonterminal(true, submittedStart, 1, length))
         ));
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(true, length)),
-            sat.encodeNegative(new Nonterminal(false, targetStart, 0, length-1))
+            sat.encodeNegative(new Nonterminal(false, targetStart, 1, length))
         ));
 
         // Sub should NOT produce --> target produces AND submission doesn't
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(false, length)),
-            sat.encodeNegative(new Nonterminal(true, submittedStart, 0, length-1))
+            sat.encodeNegative(new Nonterminal(true, submittedStart, 1, length))
         ));
         implication.add(List.of(
             sat.encodeNegative(new ExactlyOneDerives(false, length)),
-            sat.encodePositive(new Nonterminal(false, targetStart, 0, length-1))
+            sat.encodePositive(new Nonterminal(false, targetStart, 1, length))
         ));
 
         // For SAT, either a) target should produce something, or b) submission produces something it shouldn't.
@@ -429,10 +431,10 @@ public class GrammarEqualityChecker {
         ));
 
         if (DEBUG) {
-            System.out.println(new ExactlyOneDerives(true, length) + " -> " + new Nonterminal(true, submittedStart, 0, length-1));
-            System.out.println(new ExactlyOneDerives(true, length) + " -> !" + new Nonterminal(false, submittedStart, 0, length-1));
-            System.out.println(new ExactlyOneDerives(false, length) + " -> !" + new Nonterminal(true, submittedStart, 0, length-1));
-            System.out.println(new ExactlyOneDerives(false, length) + " -> " + new Nonterminal(false, submittedStart, 0, length-1));
+            System.out.println(new ExactlyOneDerives(true, length) + " -> " + new Nonterminal(true, submittedStart, 1, length));
+            System.out.println(new ExactlyOneDerives(true, length) + " -> !" + new Nonterminal(false, submittedStart, 1, length));
+            System.out.println(new ExactlyOneDerives(false, length) + " -> !" + new Nonterminal(true, submittedStart, 1, length));
+            System.out.println(new ExactlyOneDerives(false, length) + " -> " + new Nonterminal(false, submittedStart, 1, length));
         }
 
         return implication;
@@ -441,7 +443,7 @@ public class GrammarEqualityChecker {
     private Witness extractWitnessFromSat(IProblem problem, int length) {
         String[] alphabet = targetGrammar.getTerminals();
         String witness = "";
-        for (int position = 0; position < length; position++) {
+        for (int position = 1; position <= length; position++) {
             for (String terminal : alphabet) {
                 if (problem.model(sat.encodePositive(new Terminal(terminal, position)))) {
                     witness += terminal;

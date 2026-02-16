@@ -27,6 +27,7 @@ import regular.Discretizer;
 import regular.RegularExpression;
 
 import afctevaluator.cfg.GrammarEqualityChecker;
+import afctevaluator.cfg.GrammarTransformer;
 
 import static afctevaluator.CFGAnalyzerInterface.*;
 import static automata.SimulatorFactory.getSimulator;
@@ -372,7 +373,7 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handleCFG(ContextFreeGrammar answer, ContextFreeGrammar submitted) {
-        if (true) {
+        if (false) {
             String answerStr = convertGrammar(answer);
             String submittedStr = convertGrammar(submitted);
     
@@ -385,7 +386,9 @@ public class CheckSubmission {
     private Feedback handleGrammar(Grammar answer, Grammar submitted) {
         if (true) {
             String answerStr = convertGrammar(answer);
-            String submittedStr = convertGrammar(submitted);
+            String submittedStr = convertGrammar(GrammarTransformer.toChomsky(submitted));
+            System.out.println(answerStr);
+            System.out.println(submittedStr);
     
             return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
         }
