@@ -1,13 +1,33 @@
 package afctevaluator;
 
+import automata.*;
+import automata.turing.NDTMSimulator;
+import automata.turing.TMSimulator;
+import automata.turing.TuringMachine;
 import grammar.Grammar;
 import grammar.GrammarChecker;
 import grammar.Production;
+import grammar.parse.BruteParser;
+import grammar.parse.BruteParserEvent;
+import grammar.parse.BruteParserListener;
 
+import javax.swing.*;
+import javax.swing.Timer;
+import javax.swing.tree.TreeNode;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.*;
+import java.time.Duration;
 import java.util.*;
 
+import static automata.SimulatorFactory.getSimulator;
+
 public class CFGAnalyzerInterface {
+    boolean errored = false;
+    String status = null;
+    Integer result = null;
+    boolean encounteredTimeout = false;
+
     private static String quoteRHSTerminals(Production p) {
         String[] terminals = p.getTerminals();
         ArrayList<String> rhs = new ArrayList<>();
@@ -117,12 +137,19 @@ public class CFGAnalyzerInterface {
         return sb.toString();
     }
 
-    private static Feedback getGrade(File answerTempFile, File submittedTempFile, String analyzer, String limit) {
+    private Feedback getGrade(File answerTempFile, File submittedTempFile, String analyzer, String limit) {
         String feedback = null;
         String error = null;
 
         try {
             ProcessBuilder pb = new ProcessBuilder(analyzer, "--equivalence", "--maxbound", limit, answerTempFile.getAbsolutePath(), submittedTempFile.getAbsolutePath());
+
+            // This should never be done. It literally just allows for arbitrary code execution.
+            // ONLY use for local testing.
+//            String[] parts = analyzer.split(" ");
+//            List<String> partsList = Arrays.asList(parts);
+//            ProcessBuilder pb = new ProcessBuilder(partsList);
+
             pb.redirectErrorStream(true);
 
             Process p = pb.start();
@@ -132,15 +159,15 @@ public class CFGAnalyzerInterface {
             }
         } catch (IOException e) {
             error = getStackTraceAsString(e);
-            Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer error!");
-            //Feedback errorFeedback = Feedback.contactProfessorError(error);
+            //Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer error!");
+            Feedback errorFeedback = Feedback.contactProfessorError(error);
             errorFeedback.errors.add(error);
             return errorFeedback;
             //e.printStackTrace();
         } catch (InterruptedException ie) {
             error = getStackTraceAsString(ie);
-            Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer timed out!");
-            //Feedback errorFeedback = Feedback.contactProfessorError(error);
+            //Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer timed out!");
+            Feedback errorFeedback = Feedback.contactProfessorError(error);
             errorFeedback.errors.add(error);
             return errorFeedback;
             //ie.printStackTrace();
@@ -149,7 +176,7 @@ public class CFGAnalyzerInterface {
         return new Feedback(feedback, false, error);
     }
 
-    public static Feedback gradeCFG(String answerStr, String submittedStr, String analyzer, int limit) {
+    public Feedback gradeCFG(String answerStr, String submittedStr, String analyzer, int limit) {
         Feedback trackWarningsAndErrors = new Feedback(null, false);
         Feedback feedback;
         String text;
@@ -170,10 +197,15 @@ public class CFGAnalyzerInterface {
             String limitStr = Integer.toString(limit);
             feedback = getGrade(answerTempFile, submittedTempFile, analyzer, limitStr);
             trackWarningsAndErrors.addWarningsAndErrors(feedback.warnings, feedback.errors);
+            boolean errored1 = !feedback.errors.isEmpty();
+            this.errored = errored1;
 
+            boolean errored2 = false;
             if (feedback.feedback == null) {
                 feedback = getGrade(submittedTempFile, answerTempFile, analyzer, limitStr);
                 trackWarningsAndErrors.addWarningsAndErrors(feedback.warnings, feedback.errors);
+                errored2 = !feedback.errors.isEmpty();
+                this.errored = errored2;
             }
 
             if (feedback.feedback.isEmpty()) {
@@ -195,6 +227,163 @@ public class CFGAnalyzerInterface {
         feedback = new Feedback("A server error occurred. Please contact your professor.", false);
         trackWarningsAndErrors.errors.add(error);
         feedback.addWarningsAndErrors(trackWarningsAndErrors.warnings, trackWarningsAndErrors.errors);
+        return feedback;
+    }
+
+    private int doBruteForceParse(Grammar grammar, String input) throws InterruptedException {
+        BruteParser parser = BruteParser.get(grammar, input);
+
+        parser.addBruteParserListener(new BruteParserListener() {
+            public void bruteParserStateChange(BruteParserEvent e) {
+                synchronized (e.getParser()) {
+                    switch (e.getType()) {
+                        case BruteParserEvent.START:
+                            break;
+                        case BruteParserEvent.REJECT:
+                            status = "String rejected.";
+                            break;
+                        case BruteParserEvent.PAUSE:
+                            status = "Parser paused.";
+                            break;
+                        case BruteParserEvent.ACCEPT:
+                            status = "String accepted!";
+                            break;
+                    }
+                    if (parser.isFinished()) {
+                        if (e.isAccept()) {
+                            // Accepted
+                            result = Math.max(parser.getTotalNodeCount(), 1);
+                        } else if (e.isReject()) {
+                            // Rejected!
+                            result = 0;
+                        } else {
+                            result = -1;
+                        }
+                    }
+                }
+            }
+        });
+        parser.start();
+
+        Thread parseThread = parser.getParseThread();
+        parseThread.join(Duration.ofSeconds(10));
+//        if (parseThread.isAlive()) {
+//
+//        }
+        String temp = "";
+        if (parser.isFinished()) {
+            temp = "temp1" + temp + "temp2" + this.status;
+        }
+
+        if (parser.getAnswer() != null) {
+            return result;
+        }
+        return result;
+    }
+
+    /**
+     * A helper method for checking if the given grammar accepts the given input.
+     *
+     * @param grammar the grammar to test
+     * @param input the object that represents the input
+     * @return int >= 1 if the input is accepted, 0 if the input is rejected, -1 if the test ended early
+     */
+    private int testAcceptance(Grammar grammar, String input) {
+        // TODO: pick which parseer to use intelligently
+        //  - i.e. pick the one that is likely to be the fastest
+        int result;
+        try {
+            result = doBruteForceParse(grammar, input);
+        } catch (InterruptedException e) {
+            if (this.result != null) {
+                return this.result;
+            }
+            return -1;
+        }
+        if (this.result != null) {
+            return this.result;
+        }
+        return result;
+    }
+
+    private int parallelParse(Grammar answer, Grammar submitted, String witness) {
+        // TODO: maybe start parsing on both submission and answer at once?
+        return -1;
+    }
+
+
+    /**
+     * A helper method for determining if the given witness string should or should not be accepted.
+     *
+     * @param answer the correct grammar
+     * @param submitted the (incorrect) submitted grammar
+     * @param witness the witness string
+     * @return int >= 1 if the input should be accepted, 0 if the input should be rejected, -1 if the test ended early
+     */
+    private int determineWitnessType(Grammar answer, Grammar submitted, String witness) {
+        int answerResult = testAcceptance(answer, witness);
+
+        if (answerResult == -1) {
+            encounteredTimeout = true;
+            int submissionResult = testAcceptance(submitted, witness);
+
+            if (submissionResult == -1) {
+                return -1;
+            } else if (submissionResult == 0) {
+                answerResult = 1;
+            } else {
+                answerResult = 0;
+            }
+        }
+
+        return answerResult;
+    }
+
+
+    public static Feedback handleGrammar(Grammar answer, Grammar submitted, String analyzer, int limit) {
+        String answerStr = convertGrammar(answer);
+        String submittedStr = convertGrammar(submitted);
+        CFGAnalyzerInterface grader = new CFGAnalyzerInterface();
+        Feedback feedback = grader.gradeCFG(answerStr, submittedStr, analyzer, limit);
+
+//        if (grader.errored) {
+//            feedback.feedback = feedback.feedback + "Errored";
+//            return feedback;
+//        }
+        if (!feedback.correct) {
+            String[] parts = feedback.feedback.split("\"");
+            if (parts.length < 2) {
+                return feedback;
+            }
+            String witness = parts[1];
+            int witnessType = grader.determineWitnessType(answer, submitted, witness);
+
+            String feedbackStr = "Your answer is incorrect. ";
+
+            if (witnessType == -1) {
+//                if (witness.contentEquals("")) {
+//                    feedbackStr = feedbackStr + "The empty string is an example.";
+//                } else {
+//                    feedbackStr = feedbackStr + "The string \"" + witness + "\" is an example.";
+//                }
+                //feedbackStr = "-1 -- ";
+            } else if (witnessType == 0) {
+                if (witness.contentEquals("")) {
+                    feedbackStr = feedbackStr + "The empty string should NOT be accepted.";
+                } else {
+                    feedbackStr = feedbackStr + "The string \"" + witness + "\" should NOT be accepted.";
+                }
+            } else {
+                if (witness.contentEquals("")) {
+                    feedbackStr = feedbackStr + "The empty string SHOULD be accepted.";
+                } else {
+                    feedbackStr = feedbackStr + "The string \"" + witness + "\" SHOULD be accepted.";
+                }
+            }
+
+            feedback.feedback = feedbackStr;// + feedback.feedback;
+        }
+
         return feedback;
     }
 }

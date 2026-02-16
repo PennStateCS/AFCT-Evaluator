@@ -263,7 +263,6 @@ public class CheckSubmission {
      * @return int >= 1 if the input should be accepted, 0 if the input should be rejected, -1 if the test ended early
      */
     private int determineWitnessType(Automaton answer, Automaton submitted, Object witness) {
-        // TODO: make this also work with CFGs!
         int answerResult = testAcceptance(answer, witness);
 
         if (answerResult == -1) {
@@ -373,17 +372,11 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handleCFG(ContextFreeGrammar answer, ContextFreeGrammar submitted) {
-        String answerStr = convertGrammar(answer);
-        String submittedStr = convertGrammar(submitted);
-
-        return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+        return CFGAnalyzerInterface.handleGrammar(answer, submitted, this.analyzer, this.limit);
     }
 
     private Feedback handleGrammar(Grammar answer, Grammar submitted) {
-        String answerStr = convertGrammar(answer);
-        String submittedStr = convertGrammar(submitted);
-
-        return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
+        return CFGAnalyzerInterface.handleGrammar(answer, submitted, this.analyzer, this.limit);
     }
 
     /**
