@@ -8,6 +8,15 @@ import java.util.Set;
 
 public class EasyCNFConverter {
     public static Grammar convertToCNF(Grammar grammar) {
+        try {
+            return internal_convertToCNF(grammar);
+        } catch (Exception ignored) {
+            // TODO: handle exceptions better. Just doing this for now...
+            return null;
+        }
+    }
+
+    private static Grammar internal_convertToCNF(Grammar grammar) {
         // Remove lambda productions
         LambdaProductionRemover lambdaRemover = new LambdaProductionRemover();
         Set<String> lambdaDerivers = lambdaRemover.getCompleteLambdaSet(grammar);
