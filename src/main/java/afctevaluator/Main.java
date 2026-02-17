@@ -1,6 +1,7 @@
 package afctevaluator;
 
 import com.google.gson.Gson;
+import gui.DisableGUI;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -187,6 +188,7 @@ public class Main {
      */
     public static void main(String[] args) {
         handleArgs(args);
+        DisableGUI.allowGUI = false;
         CheckSubmission checkSubmission = new CheckSubmission();
         Feedback feedback;
         try {

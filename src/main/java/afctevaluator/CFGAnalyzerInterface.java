@@ -23,10 +23,18 @@ import java.util.*;
 import static automata.SimulatorFactory.getSimulator;
 
 public class CFGAnalyzerInterface {
-    boolean errored = false;
-    String status = null;
-    Integer result = null;
-    boolean encounteredTimeout = false;
+    private String status = null;
+    private Integer result = null;
+    public boolean errored = false;
+    public boolean encounteredTimeout = false;
+
+    public synchronized void setStatus(String status) {
+        this.status = status;
+    }
+
+    public synchronized void setResult(Integer result) {
+        this.result = result;
+    }
 
     private static String quoteRHSTerminals(Production p) {
         String[] terminals = p.getTerminals();
@@ -159,6 +167,7 @@ public class CFGAnalyzerInterface {
             }
         } catch (IOException e) {
             error = getStackTraceAsString(e);
+            // TODO - switch this back to the simple error message
             //Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer error!");
             Feedback errorFeedback = Feedback.contactProfessorError(error);
             errorFeedback.errors.add(error);
@@ -166,6 +175,7 @@ public class CFGAnalyzerInterface {
             //e.printStackTrace();
         } catch (InterruptedException ie) {
             error = getStackTraceAsString(ie);
+            // TODO - switch this back to the simple error message
             //Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer timed out!");
             Feedback errorFeedback = Feedback.contactProfessorError(error);
             errorFeedback.errors.add(error);
@@ -289,21 +299,9 @@ public class CFGAnalyzerInterface {
      * @return int >= 1 if the input is accepted, 0 if the input is rejected, -1 if the test ended early
      */
     private int testAcceptance(Grammar grammar, String input) {
-        // TODO: pick which parseer to use intelligently
-        //  - i.e. pick the one that is likely to be the fastest
-        int result;
-        try {
-            result = doBruteForceParse(grammar, input);
-        } catch (InterruptedException e) {
-            if (this.result != null) {
-                return this.result;
-            }
-            return -1;
-        }
-        if (this.result != null) {
-            return this.result;
-        }
-        return result;
+        CFGParser parser = new CFGParser();
+        Integer result = parser.parse(grammar, input);
+        return Objects.requireNonNullElse(result, -1);
     }
 
     private int parallelParse(Grammar answer, Grammar submitted, String witness) {
