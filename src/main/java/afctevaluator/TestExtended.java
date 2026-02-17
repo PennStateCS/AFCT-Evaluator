@@ -59,22 +59,28 @@ public class TestExtended {
         ArrayList<TestCase> testCases = new ArrayList<>();
 
         // Homework 0
-        testCases.add(new TestCase("Homework 0", "Hw-00-solution.jff", false, getNumberedTestFileNames("Hw-00-incorrect-answer-", 3)));
+        //testCases.add(new TestCase("Homework 0", "Hw-00-solution.jff", false, getNumberedTestFileNames("Hw-00-incorrect-answer-", 3)));
 
 
         // Homework 2 - Problem 2
-        testCases.add(new TestCase("Homework 2 - Problem 2", "Hw-02-p02-solution.jff", true, getNumberedTestFileNames("Hw-02-p02-incorrect-answer-", 3)));
+        //testCases.add(new TestCase("Homework 2 - Problem 2", "Hw-02-p02-solution.jff", true, getNumberedTestFileNames("Hw-02-p02-incorrect-answer-", 3)));
 
         // Regular Expression
         ArrayList<String> reTestFileNames = new ArrayList<>();
         reTestFileNames.add("1.18a-no.jff");
         reTestFileNames.add("1.18a.jff");
-        testCases.add(new TestCase("Regular Expressions", "1.18a.jff", false, reTestFileNames));
+        //testCases.add(new TestCase("Regular Expressions", "1.18a.jff", false, reTestFileNames));
 
         // CFG
         ArrayList<String> testFileNames = new ArrayList<>();
         testFileNames.add("2.4b_better.jff");
-        testCases.add(new TestCase("CFG", "2.4b.jff", false, testFileNames));
+        //testCases.add(new TestCase("CFG", "2.4b.jff", false, testFileNames));
+
+        // CFG - Counterexample
+        //testCases.add(new TestCase("CFG", "zcounter1.jff", false, "zcounter1.jff"));
+        //testCases.add(new TestCase("CFG", "zcounter-complex-2.6d.jff", false, "zcounter-complex-2.6d-Mod.jff"));
+        //testCases.add(new TestCase("CFG", "zcounter-sol.jff", false, "zcounter-incorrect.jff"));
+        testCases.add(new TestCase("CFG", "zcounter-complex-2.6d - Copy.jff", false, "zcounter-complex-2.6d-Mod - Copy.jff"));
 
         return testCases;
     }

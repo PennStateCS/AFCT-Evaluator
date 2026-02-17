@@ -54,6 +54,8 @@ public class CheckSubmission {
     public ArrayList<String> warnings;
     public ArrayList<String> errors;
 
+    public boolean useCFGAnalyzer = false;
+
     /**
      * Constructor for CheckSubmission.
      */
@@ -373,7 +375,7 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handleCFG(ContextFreeGrammar answer, ContextFreeGrammar submitted) {
-        if (false) {
+        if (useCFGAnalyzer) {
             String answerStr = convertGrammar(answer);
             String submittedStr = convertGrammar(submitted);
     
@@ -384,7 +386,7 @@ public class CheckSubmission {
     }
 
     private Feedback handleGrammar(Grammar answer, Grammar submitted) {
-        if (true) {
+        if (useCFGAnalyzer) {
             String answerStr = convertGrammar(answer);
             String submittedStr = convertGrammar(GrammarTransformer.toChomsky(submitted));
             System.out.println(answerStr);
