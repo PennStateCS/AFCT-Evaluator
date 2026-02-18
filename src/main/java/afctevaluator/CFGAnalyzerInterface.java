@@ -40,6 +40,7 @@ public class CFGAnalyzerInterface {
         if (input instanceof Grammar g) {
             ArrayList<Production> productions = new ArrayList<>(Arrays.asList(g.getProductions()));
             final ArrayList<String> lhss = new ArrayList<>();
+            lhss.add(g.getStartVariable());
             String lastLHS = null;
             Iterator<Production> productionIterator = productions.iterator();
 
@@ -128,9 +129,10 @@ public class CFGAnalyzerInterface {
 
             Process p = pb.start();
 
-            if (p.waitFor() != 2) {
+            if (true || p.waitFor() != 2) {
                 feedback = new String(p.getInputStream().readAllBytes());
             }
+            System.out.println("CFGA SAYS: " + feedback);
         } catch (IOException e) {
             error = getStackTraceAsString(e);
             Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer error!");

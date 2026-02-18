@@ -389,8 +389,8 @@ public class CheckSubmission {
         if (useCFGAnalyzer) {
             String answerStr = convertGrammar(answer);
             String submittedStr = convertGrammar(GrammarTransformer.toChomsky(submitted));
-            System.out.println(answerStr);
-            System.out.println(submittedStr);
+            System.out.println("1: " + answerStr);
+            System.out.println("2: " + submittedStr);
     
             return gradeCFG(answerStr, submittedStr, this.analyzer, this.limit);
         }

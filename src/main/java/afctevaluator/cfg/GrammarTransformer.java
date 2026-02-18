@@ -1,6 +1,9 @@
 package afctevaluator.cfg;
 
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import automata.vdg.VariableDependencyGraph;
@@ -9,7 +12,7 @@ import grammar.Grammar;
 import grammar.LambdaProductionRemover;
 import grammar.Production;
 import grammar.UnitProductionRemover;
-import grammar.UselessProductionRemover;
+import grammar.cfg.ContextFreeGrammar;
 
 /**
  * Helper class to perform basic utilities that JFLAP/AFCT should have a single
@@ -34,12 +37,13 @@ public class GrammarTransformer {
      *         above.
      */
     public static Grammar toChomsky(Grammar g) {
+
         String start = g.getStartVariable();
         String[] ends = g.getTerminals();
         Grammar nonEmptyG = removeEmptyProductions(g);
         Grammar nonTransitiveG = reduceTransitiveProductions(nonEmptyG);
-        // Grammar usefulG = removeUselessRules(nonTransitiveG);
-        Grammar chomskyG = convertToChomsky(nonTransitiveG, start, ends);
+        Grammar usefulG = removeUselessRules(nonTransitiveG, start, ends);
+        Grammar chomskyG = convertToChomsky(usefulG, start, ends);
         return chomskyG;
     }
 
@@ -73,15 +77,46 @@ public class GrammarTransformer {
     }
 
     /**
-     * Eliminate rules that are "useless" -- that is, there are other rules
-     * that yield the same results. Running other functions in this class may 
-     * cause this, and the code here cleans them up. 
+     * Eliminate rules that are unable to terminate. This is possible once 
+     * lambda states are removed. 
      * @param g The grammar to perform this operation on. It is unaffected.
      * @return A grammar where every production rule must be used to create
      *         any string in its alphabet. 
      */
-    private static Grammar removeUselessRules(Grammar g) {
-        return UselessProductionRemover.getUselessProductionlessGrammar(g);
+    private static Grammar removeUselessRules(Grammar g, String start, String[] ends) {
+        Grammar output = new ContextFreeGrammar();
+        output.setStartVariable(start);
+
+        Set<String> usableSymbols = new HashSet<>();
+        List<Production> addableProductions = new ArrayList<>(Arrays.asList(g.getProductions()));
+        usableSymbols.addAll(Arrays.asList(ends));
+
+        boolean somethingAdded;
+
+        do {
+            somethingAdded = false;
+            for (int i = addableProductions.size()-1; i >= 0; i--) {
+                Production p = addableProductions.get(i);
+                boolean usable = true;
+                for (char c : p.getRHS().toCharArray()) {
+                    String symbol = c + "";
+                    if (!usableSymbols.contains(symbol)) {
+                        usable = false;
+                        break;
+                    }
+                }
+                if (!usable) continue;
+
+                addableProductions.remove(i);
+                somethingAdded = true;
+                output.addProduction(p);
+                usableSymbols.add(p.getLHS());
+            }
+
+        } while (somethingAdded);
+
+        if (!usableSymbols.contains(start)) return new ContextFreeGrammar();
+        return output;
     }
 
     /**

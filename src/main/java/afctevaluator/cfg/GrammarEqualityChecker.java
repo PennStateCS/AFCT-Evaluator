@@ -45,7 +45,7 @@ import org.sat4j.specs.TimeoutException;
  */
 public class GrammarEqualityChecker {
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     
     private Grammar submittedGrammar;
     private Grammar targetGrammar;
@@ -69,7 +69,7 @@ public class GrammarEqualityChecker {
 
         Witness witness = null;
         // lmao
-        for (int length = 1; witness == null && length <= 3; length++) {
+        for (int length = 1; witness == null && length <= 15; length++) {
             witness = findInequalityWitness(length);
         }
 
@@ -125,7 +125,7 @@ public class GrammarEqualityChecker {
     }
 
     public Witness findInequalityWitness(int length) {
-        System.out.println("Checking Equality. LENGTH = " + length);
+        if (DEBUG) System.out.println("Checking Equality. LENGTH = " + length);
 
         List<List<Integer>> constraints = new ArrayList<>();
         constraints.addAll(uniqueSymbolsConstraint(length));
@@ -148,7 +148,7 @@ public class GrammarEqualityChecker {
             }
         } catch (ContradictionException e) {
             // Indicates a trivial contradiction -- impossible?
-            System.err.println("Trivial Contradiction detected...?");
+            if (DEBUG) System.err.println("Trivial Contradiction detected...?");
             return null; 
         }
 
