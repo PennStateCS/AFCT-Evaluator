@@ -81,6 +81,7 @@ public class TestExtended {
         //testCases.add(new TestCase("CFG", "zcounter-complex-2.6d.jff", false, "zcounter-complex-2.6d-Mod.jff"));
         //testCases.add(new TestCase("CFG", "zcounter-sol.jff", false, "zcounter-incorrect.jff"));
         testCases.add(new TestCase("CFG", "zcounter-complex-2.6d - Copy.jff", false, "zcounter-complex-2.6d-Mod - Copy.jff"));
+        testCases.add(new TestCase("CFG - No epsilon", "zcounter-complex-2.6d - Copy2.jff", false, "zcounter-complex-2.6d-Mod - Copy2.jff"));
 
         return testCases;
     }
