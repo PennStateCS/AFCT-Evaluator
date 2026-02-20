@@ -19,6 +19,8 @@ import java.awt.event.ActionListener;
 import java.io.*;
 import java.time.Duration;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static automata.SimulatorFactory.getSimulator;
 
@@ -130,7 +132,7 @@ public class CFGAnalyzerInterface {
 
     public static String getStackTraceAsString(Throwable throwable) {
         StringBuilder sb = new StringBuilder();
-        sb.append(throwable.getMessage()).append("\n");
+        sb.append(throwable.getClass().getSimpleName()).append(": ").append(throwable.getMessage()).append("\n");
         for (StackTraceElement element : throwable.getStackTrace()) {
             sb.append(element.toString()).append("\n");
         }
@@ -140,6 +142,7 @@ public class CFGAnalyzerInterface {
     private Feedback getGrade(File answerTempFile, File submittedTempFile, String analyzer, String limit) {
         String feedback = null;
         String error = null;
+        boolean badWaitFor = false;
 
         try {
             ProcessBuilder pb = new ProcessBuilder(analyzer, "--equivalence", "--maxbound", limit, answerTempFile.getAbsolutePath(), submittedTempFile.getAbsolutePath());
@@ -154,9 +157,11 @@ public class CFGAnalyzerInterface {
 
             Process p = pb.start();
 
-            if (p.waitFor() != 2) {
-                feedback = new String(p.getInputStream().readAllBytes());
+            if (p.waitFor() == 2) {
+                badWaitFor = true;
             }
+            feedback = new String(p.getInputStream().readAllBytes());
+
         } catch (IOException e) {
             error = getStackTraceAsString(e);
             //Feedback errorFeedback = Feedback.contactProfessorError("CFGAnalyzer error!");
@@ -173,7 +178,11 @@ public class CFGAnalyzerInterface {
             //ie.printStackTrace();
         }
 
-        return new Feedback(feedback, false, error);
+        Feedback result = new Feedback(feedback, false, error);
+        if (badWaitFor) {
+            result.warnings.add("p.waitFor() = 2");
+        }
+        return result;
     }
 
     public Feedback gradeCFG(String answerStr, String submittedStr, String analyzer, int limit) {
@@ -208,12 +217,18 @@ public class CFGAnalyzerInterface {
                 this.errored = errored2;
             }
 
-            if (feedback.feedback.isEmpty()) {
-                correct = true;
-                text = "Correct!";
+            if (feedback.feedback == null) {
+                // This is bad...
+                text = "Error: CFGAnalyzer feedback was null both times. Please contact your professor.";
             } else {
-                text = feedback.feedback;
+                if (feedback.feedback.isEmpty()) {
+                    correct = true;
+                    text = "Correct!";
+                } else {
+                    text = feedback.feedback;
+                }
             }
+
             feedback = new Feedback(text, correct);
             feedback.addWarningsAndErrors(trackWarningsAndErrors.warnings, trackWarningsAndErrors.errors);
             return feedback;
@@ -299,6 +314,9 @@ public class CFGAnalyzerInterface {
                 return this.result;
             }
             return -1;
+        } catch (IllegalArgumentException ie) {
+            // TODO: add this to the tracked errors for the feedback
+            return -1;
         }
         if (this.result != null) {
             return this.result;
@@ -355,10 +373,27 @@ public class CFGAnalyzerInterface {
             if (parts.length < 2) {
                 return feedback;
             }
-            String witness = parts[1];
-            int witnessType = grader.determineWitnessType(answer, submitted, witness);
 
             String feedbackStr = "Your answer is incorrect. ";
+
+            if (feedback.warnings.contains("p.waitFor() = 2")) {
+                Pattern pattern = Pattern.compile("nonterminal\\s+(.+?)\\s+seems to have no definition");
+                Matcher matcher = pattern.matcher(feedback.feedback);
+
+                if (matcher.find()) {
+                    // TODO: maybe look into way to auto adjust input so that capital letters can be treated as non-terminals
+                    //      like maybe check left hand side of each rule, and is "A" for example is on the right hand
+                    //      side of some rule, but never on the left hand side, treat it as a non-terminal?
+                    String nonterminal = matcher.group(1);
+                    //feedback.feedback = feedbackStr + "The variable \"" + nonterminal + "\" is not defined in your grammar.";
+                    //feedback.feedback = feedbackStr + "The variable \"" + nonterminal + "\" has no production rules in your grammar.";
+                    feedback.feedback = feedbackStr + "Your grammar has a variable, \"" + nonterminal + "\", with no defined production rules.";
+                    return feedback;
+                }
+            }
+
+            String witness = parts[1];
+            int witnessType = grader.determineWitnessType(answer, submitted, witness);
 
             if (witnessType == -1) {
 //                if (witness.contentEquals("")) {
@@ -367,6 +402,7 @@ public class CFGAnalyzerInterface {
 //                    feedbackStr = feedbackStr + "The string \"" + witness + "\" is an example.";
 //                }
                 //feedbackStr = "-1 -- ";
+                feedbackStr += feedback.feedback;
             } else if (witnessType == 0) {
                 if (witness.contentEquals("")) {
                     feedbackStr = feedbackStr + "The empty string should NOT be accepted.";
