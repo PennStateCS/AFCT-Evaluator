@@ -379,6 +379,10 @@ public class CheckSubmission {
         return CFGAnalyzerInterface.handleGrammar(answer, submitted, this.analyzer, this.limit);
     }
 
+    private Feedback handleGrammar(Grammar answer, Grammar submitted, PushdownAutomaton pdaAnswer, PushdownAutomaton pdaSubmission) {
+        return CFGAnalyzerInterface.handleGrammar(answer, submitted, this.analyzer, this.limit, pdaAnswer, pdaSubmission);
+    }
+
     /**
      * A helper method for converting a Pushdown Automaton (PDA) into a Context Free Grammar (CFG).
      *
@@ -399,9 +403,10 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handlePDA(PushdownAutomaton answer, PushdownAutomaton submitted) {
-        ContextFreeGrammar answerCFG = PDAToCFG(answer);
-        ContextFreeGrammar submittedCFG = PDAToCFG(submitted);
-        return handleCFG(answerCFG, submittedCFG);
+        // TODO: test if this fixes anything
+        Grammar answerCFG = PDAToCFG(answer);
+        Grammar submittedCFG = PDAToCFG(submitted);
+        return handleGrammar(answerCFG, submittedCFG, answer, submitted);
     }
 
     /**

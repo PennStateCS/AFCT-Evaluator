@@ -1,6 +1,7 @@
 package afctevaluator;
 
 import automata.*;
+import automata.pda.PushdownAutomaton;
 import automata.turing.NDTMSimulator;
 import automata.turing.TMSimulator;
 import automata.turing.TuringMachine;
@@ -358,7 +359,39 @@ public class CFGAnalyzerInterface {
     }
 
 
-    public static Feedback handleGrammar(Grammar answer, Grammar submitted, String analyzer, int limit) {
+    /**
+     * A helper method for determining if the given witness string should or should not be accepted.
+     *
+     * @param answer the correct PDA
+     * @param submitted the (incorrect) submitted PDA
+     * @param witness the witness string
+     * @return int >= 1 if the input should be accepted, 0 if the input should be rejected, -1 if the test ended early
+     */
+    private int pdaDetermineWitnessType(PushdownAutomaton answer, PushdownAutomaton submitted, String witness) {
+        PDAAcceptanceTester answerAcceptanceTester = new PDAAcceptanceTester(answer);
+
+        int answerResult = answerAcceptanceTester.checkAcceptance(witness);
+
+        if (answerResult == -1) {
+            encounteredTimeout = true;
+
+            PDAAcceptanceTester submissionAcceptanceTester = new PDAAcceptanceTester(submitted);
+            int submissionResult = submissionAcceptanceTester.checkAcceptance(witness);
+
+            if (submissionResult == -1) {
+                return -1;
+            } else if (submissionResult == 0) {
+                answerResult = 1;
+            } else {
+                answerResult = 0;
+            }
+        }
+
+        return answerResult;
+    }
+
+
+    public static Feedback handleGrammar(Grammar answer, Grammar submitted, String analyzer, int limit, PushdownAutomaton pdaAnswer, PushdownAutomaton pdaSubmission) {
         String answerStr = convertGrammar(answer);
         String submittedStr = convertGrammar(submitted);
         CFGAnalyzerInterface grader = new CFGAnalyzerInterface();
@@ -393,7 +426,21 @@ public class CFGAnalyzerInterface {
             }
 
             String witness = parts[1];
-            int witnessType = grader.determineWitnessType(answer, submitted, witness);
+            int witnessType;
+            if (pdaAnswer == null || pdaSubmission == null) {
+//                feedback.errors.add("DOING GRAMMAR -- BADDDD");
+                witnessType = grader.determineWitnessType(answer, submitted, witness);
+            } else {
+//                feedback.errors.add("DOING pdaDetermineWitnessType");
+                witnessType = grader.pdaDetermineWitnessType(pdaAnswer, pdaSubmission, witness);
+//                feedback.errors.add("witnessType = " + witnessType);
+//                feedback.errors.add("encounteredTimeout = " + grader.encounteredTimeout);
+            }
+
+            if (grader.encounteredTimeout) {
+                feedback.warnings.add("encounteredTimeout = true");
+            }
+
 
             if (witnessType == -1) {
 //                if (witness.contentEquals("")) {
@@ -421,5 +468,9 @@ public class CFGAnalyzerInterface {
         }
 
         return feedback;
+    }
+
+    public static Feedback handleGrammar(Grammar answer, Grammar submitted, String analyzer, int limit) {
+        return handleGrammar(answer, submitted, analyzer, limit, null, null);
     }
 }
