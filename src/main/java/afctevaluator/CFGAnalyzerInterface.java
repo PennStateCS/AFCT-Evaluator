@@ -146,7 +146,7 @@ public class CFGAnalyzerInterface {
 
     private Feedback getGrade(File answerTempFile, File submittedTempFile, String analyzer, String limit) {
         String feedback = null;
-        String error = null;
+        String error;
         boolean badWaitFor = false;
 
         try {
@@ -183,7 +183,7 @@ public class CFGAnalyzerInterface {
             //ie.printStackTrace();
         }
 
-        Feedback result = new Feedback(feedback, false, error);
+        Feedback result = new Feedback(feedback, false);
         if (badWaitFor) {
             result.warnings.add("p.waitFor() = 2");
         }
@@ -404,11 +404,17 @@ public class CFGAnalyzerInterface {
         //long timeTakenEquivalence = getTimeTaken(equivalenceDone);
         feedback.info.add("Equivalence - time taken: " + getTimeTaken(equivalenceDone) + " ms.");
 
-//        if (grader.errored) {
+        if (grader.errored) {
+            feedback.warnings.add("grader.errored = true");
 //            feedback.feedback = feedback.feedback + "Errored";
 //            return feedback;
-//        }
+        }
         if (!feedback.correct) {
+            feedback.info.add("Unmodified feedback: " + feedback.feedback);
+            if (feedback.feedback.startsWith("Fatal error:")) {
+                return feedback;
+            }
+
             String[] parts = feedback.feedback.split("\"");
             if (parts.length < 2) {
                 return feedback;
