@@ -2,18 +2,20 @@ package afctevaluator;
 
 public class WitnessFeedbackHelper {
 
-    public static String getFeedback(boolean correct, int witnessType, String witness) {
+    public static String getFeedback(boolean correct, Integer witnessType, String witness) {
         String feedback = "Correct!";
 
         if (!correct) {
             feedback = "Your answer is incorrect. ";
 
-            if (witnessType == -1) {
+            if (witnessType == null || witnessType == -1) {
                 if (witness.contentEquals("")) {
                     feedback = feedback + "The empty string is an example.";
                 } else {
                     feedback = feedback + "The string \"" + witness + "\" is an example.";
                 }
+                //feedback = "-1 -- ";
+                //feedback += feedback.feedback;
             } else if (witnessType == 0) {
                 if (witness.contentEquals("")) {
                     feedback = feedback + "The empty string should NOT be accepted.";

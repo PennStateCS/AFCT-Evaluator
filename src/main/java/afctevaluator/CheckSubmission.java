@@ -12,8 +12,9 @@ import file.XMLCodec;
 
 import java.awt.*;
 import java.io.*;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 import automata.fsa.FiniteStateAutomaton;
 import automata.pda.PushdownAutomaton;
@@ -27,9 +28,9 @@ import gui.regular.REToFSAController;
 import regular.Discretizer;
 import regular.RegularExpression;
 
-import javax.swing.*;
-
 import static afctevaluator.CFGAnalyzerInterface.*;
+import static afctevaluator.Main.getTimeTaken;
+import static afctevaluator.WitnessFeedbackHelper.getFeedback;
 import static automata.SimulatorFactory.getSimulator;
 import static conversions.PDAToCFG.setupPDA;
 import static conversions.PDAToCFG.transformPDA;
@@ -46,11 +47,17 @@ public class CheckSubmission {
     // Set to 15 based on the application.properties file from the original AFCT server
     // I have genuinely no idea if this is a good value to use
     // TODO - make these possible to change dynamically from the website
-    private static final String varLimit = "CFGANALYZER_LIMIT";
-    private static final String varBinary = "CFGANALYZER_BINARY";
+    private static final String CFGANALYZER_LIMIT = "CFGANALYZER_LIMIT";
+    private static final String CFGANALYZER_BINARY = "CFGANALYZER_BINARY";
+    private static final String UPGRADED_FEEDBACK = "UPGRADED_FEEDBACK";
+    private static final String TIMEOUT_SECONDS = "TIMEOUT_SECONDS";
     int limit;
     String analyzer;
     File file;
+    public static boolean useUpgradedFeedback = true;
+    public static long timeAllowedInSeconds = 30;
+    public static long timeAllowedMilli = 30_000;
+    public static boolean unknownTimeAllowed = false;
     public ArrayList<String> warnings;
     public ArrayList<String> errors;
 
@@ -70,17 +77,17 @@ public class CheckSubmission {
 
         boolean useDefaultLimit = true;
         try {
-            limitString = System.getenv(varLimit);
+            limitString = System.getenv(CFGANALYZER_LIMIT);
             if (limitString == null) {
-                warnings.add(String.format("warning: environment variable '%s' not set", varLimit));
+                warnings.add(String.format("warning: environment variable '%s' not set", CFGANALYZER_LIMIT));
             } else {
                 limit = Integer.parseInt(limitString);
                 useDefaultLimit = false;
             }
         } catch (SecurityException e) {
-            envVarError("inaccessible", "insufficient permissions to access environment variable", varLimit);
+            envVarError("inaccessible", "insufficient permissions to access environment variable", CFGANALYZER_LIMIT);
         } catch (NumberFormatException e) {
-            envVarError("invalid", String.format("'%s' must be an integer: unable to convert", varLimit), System.getenv(varLimit), "to an integer.");
+            envVarError("invalid", String.format("'%s' must be an integer: unable to convert", CFGANALYZER_LIMIT), System.getenv(CFGANALYZER_LIMIT), "to an integer.");
             //String.format("%s must be an integer: unable to convert", varLimit);
             //System.out.printf("error: invalid environment variable: %s '%s' %s\n", varLimit, System.getenv(varLimit), varLimit, prefix, envVar, suffix);
         }
@@ -90,19 +97,69 @@ public class CheckSubmission {
             warnings.add(String.format("Using default CFGAnalyzer limit: %d", limit));
         }
 
-        // Check if file was given and if it exists with proper permisions
+        // Check if file was given and if it exists with proper permissions
         try {
-            analyzer = System.getenv(varBinary);
+            analyzer = System.getenv(CFGANALYZER_BINARY);
             file = new File(analyzer);
             if (analyzer == null) {
-                warnings.add(String.format("warning: environment variable '%s' not set", varBinary));
+                warnings.add(String.format("warning: environment variable '%s' not set", CFGANALYZER_BINARY));
             }
             else if(!file.exists()){{
-                    warnings.add(String.format("warning: file '%s' does not exist on system", varBinary));
+                    warnings.add(String.format("warning: file '%s' does not exist on system", CFGANALYZER_BINARY));
                 }
             }
         } catch (SecurityException e) {
-            envVarError("inaccessible", "insufficient permissions to access environment variable", varBinary);
+            envVarError("inaccessible", "insufficient permissions to access environment variable", CFGANALYZER_BINARY);
+        }
+
+        // Check if upgraded feedback is set
+        boolean defaultedToUpgradedFeedback = false;
+        String upgradedFeedbackString;
+        try {
+            upgradedFeedbackString = System.getenv(UPGRADED_FEEDBACK);
+            if (upgradedFeedbackString == null) {
+                warnings.add(String.format("warning: environment variable '%s' not set", UPGRADED_FEEDBACK));
+                defaultedToUpgradedFeedback = true;
+            } else {
+                if (upgradedFeedbackString.strip().equalsIgnoreCase("true")) {
+                    useUpgradedFeedback = true;
+                } else if (upgradedFeedbackString.strip().equalsIgnoreCase("false")) {
+                    useUpgradedFeedback = false;
+                    warnings.add("Upgraded feedback disabled.");
+                } else {
+                    envVarError("invalid", String.format("'%s' must be a boolean: unable to convert", UPGRADED_FEEDBACK), System.getenv(UPGRADED_FEEDBACK), "to a boolean.");
+                    defaultedToUpgradedFeedback = true;
+                }
+            }
+        } catch (SecurityException e) {
+            envVarError("inaccessible", "insufficient permissions to access environment variable", CFGANALYZER_LIMIT);
+            defaultedToUpgradedFeedback = true;
+        }
+        if (defaultedToUpgradedFeedback) {
+            warnings.add("Defaulting to upgraded feedback.");
+            useUpgradedFeedback = true;
+        }
+
+        // Check time allowed for evaluation
+        String timeAllowedString;
+        try {
+            timeAllowedString = System.getenv(TIMEOUT_SECONDS);
+            if (timeAllowedString == null) {
+                warnings.add(String.format("warning: environment variable '%s' not set", TIMEOUT_SECONDS));
+                unknownTimeAllowed = true;
+            } else {
+                timeAllowedInSeconds = Long.parseLong(timeAllowedString);
+                timeAllowedMilli = timeAllowedInSeconds * 1000; // Convert from seconds to milliseconds
+            }
+        } catch (SecurityException e) {
+            envVarError("inaccessible", "insufficient permissions to access environment variable", TIMEOUT_SECONDS);
+            unknownTimeAllowed = true;
+        } catch (NumberFormatException e) {
+            envVarError("invalid", String.format("'%s' must be an integer: unable to convert", TIMEOUT_SECONDS), System.getenv(TIMEOUT_SECONDS), "to an integer.");
+            unknownTimeAllowed = true;
+        }
+        if (unknownTimeAllowed) {
+            warnings.add("Unknown time allowed, early stopping disabled for upgraded feedback..");
         }
     }
 
@@ -289,40 +346,34 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handleFSA(FiniteStateAutomaton answerFSA, FiniteStateAutomaton submittedFSA) {
+        Feedback feedback = new Feedback();
+
         EquivalenceNlgNWitness grader = new EquivalenceNlgNWitness(answerFSA, submittedFSA, true);
 
         boolean correct = grader.areAutomataEquivalent();
-        String feedback = "Correct!";
+        Instant equivalenceDone = Instant.now();
+        //long timeTakenEquivalence = getTimeTaken();
+        feedback.info.add("Equivalence - time taken: " + getTimeTaken(equivalenceDone) + " ms.");
+        String feedbackStr = "Correct!";
 
         if (grader.getHasInputError()) {
-            feedback = grader.getInputErrorMessage();
+            feedbackStr = grader.getInputErrorMessage();
         } else if (!correct) {
             String witness = grader.getWitness();
-            feedback = "Your answer is incorrect. ";
 
-            int witnessType = determineWitnessType(answerFSA, submittedFSA, witness);
-            if (witnessType == -1) {
-                if (witness.contentEquals("")) {
-                    feedback = feedback + "The empty string is an example.";
-                } else {
-                    feedback = feedback + "The string \"" + witness + "\" is an example.";
-                }
-            } else if (witnessType == 0) {
-                if (witness.contentEquals("")) {
-                    feedback = feedback + "The empty string should NOT be accepted.";
-                } else {
-                    feedback = feedback + "The string \"" + witness + "\" should NOT be accepted.";
-                }
+            Integer witnessType;
+            if (useUpgradedFeedback) {
+                witnessType = determineWitnessType(answerFSA, submittedFSA, witness);
+                long timeTakenWitnessType = Duration.between(equivalenceDone, Instant.now()).toMillis();
+                feedback.info.add("Witness type check - time taken: " + timeTakenWitnessType + " ms.");
             } else {
-                if (witness.contentEquals("")) {
-                    feedback = feedback + "The empty string SHOULD be accepted.";
-                } else {
-                    feedback = feedback + "The string \"" + witness + "\" SHOULD be accepted.";
-                }
+                witnessType = null;
             }
+
+            feedbackStr = getFeedback(false, witnessType, witness);
         }
 
-        return new Feedback(feedback, correct);
+        return new Feedback(feedbackStr, correct);
     }
 
     /**

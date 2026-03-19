@@ -16,7 +16,18 @@ public class Feedback {
     public ArrayList<String> warnings;
     public ArrayList<String> errors;
     public String version = Feedback.class.getPackage().getImplementationVersion();
+    public ArrayList<String> info;
 
+    /**
+     * Constructor for Feedback.
+     */
+    public Feedback() {
+        this.feedback = null;
+        this.correct = false;
+        this.warnings = new ArrayList<>();
+        this.errors = new ArrayList<>();
+        this.info = new ArrayList<>();
+    }
 
     /**
      * Constructor for Feedback.
@@ -29,6 +40,7 @@ public class Feedback {
         this.correct = correct;
         this.warnings = new ArrayList<>();
         this.errors = new ArrayList<>();
+        this.info = new ArrayList<>();
     }
 
     /**
@@ -43,6 +55,7 @@ public class Feedback {
         this.correct = correct;
         this.warnings = new ArrayList<>();
         this.errors = errors;
+        this.info = new ArrayList<>();
     }
 
     /**
@@ -57,6 +70,7 @@ public class Feedback {
         this.correct = correct;
         this.warnings = new ArrayList<>();
         this.errors = new ArrayList<>(Collections.singletonList(error));
+        this.info = new ArrayList<>();
     }
 
     /**
@@ -72,6 +86,7 @@ public class Feedback {
         this.correct = correct;
         this.warnings = warnings;
         this.errors = errors;
+        this.info = new ArrayList<>();
     }
 
     public static Feedback contactProfessorError(String error) {

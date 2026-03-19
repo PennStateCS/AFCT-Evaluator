@@ -3,12 +3,15 @@ package afctevaluator;
 import com.google.gson.Gson;
 import gui.DisableGUI;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import static afctevaluator.CFGAnalyzerInterface.getStackTraceAsString;
+import static afctevaluator.CheckSubmission.timeAllowedMilli;
 
 /**
  * The main AFCT-Evaluator class is run as afct-evaluator.jar, usage message is below in showHelp().
@@ -21,6 +24,7 @@ public class Main {
     private static int maxStates = -1;
     public static boolean deterministic = false;
     private static boolean outputJson = false;
+    public static Instant start;
 
     /**
      * A helper method for displaying the help/usage message for AFCT-Evaluator.
@@ -181,12 +185,27 @@ public class Main {
         }
     }
 
+    public static long getTimeLeft() {
+        // TODO: use this to stop the witnessType checking early if time is running out.
+        return timeAllowedMilli - Duration.between(start, Instant.now()).toMillis();
+    }
+
+    public static long getTimeTaken() {
+        return Duration.between(start, Instant.now()).toMillis();
+    }
+
+    public static long getTimeTaken(Instant end) {
+        return Duration.between(start, end).toMillis();
+    }
+
     /**
      * The main entry point for the AFCT-Evaluator program. Prints feedback to System.out.
      *
      * @param args command line arguments
      */
     public static void main(String[] args) {
+        start = Instant.now();
+
         handleArgs(args);
         DisableGUI.allowGUI = false;
         CheckSubmission checkSubmission = new CheckSubmission();
@@ -199,6 +218,8 @@ public class Main {
             feedback = new Feedback(feedbackMessage, false, errorMessage);
         }
         feedback.addWarningsAndErrors(checkSubmission.warnings, checkSubmission.errors);
+        feedback.info.add("Total time taken: " + getTimeTaken() + " ms.");
+
 
         if (Main.outputJson) {
             Gson gson = new Gson();

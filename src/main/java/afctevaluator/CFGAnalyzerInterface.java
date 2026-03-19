@@ -19,10 +19,14 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static afctevaluator.CheckSubmission.useUpgradedFeedback;
+import static afctevaluator.Main.getTimeTaken;
+import static afctevaluator.WitnessFeedbackHelper.getFeedback;
 import static automata.SimulatorFactory.getSimulator;
 
 public class CFGAnalyzerInterface {
@@ -396,6 +400,9 @@ public class CFGAnalyzerInterface {
         String submittedStr = convertGrammar(submitted);
         CFGAnalyzerInterface grader = new CFGAnalyzerInterface();
         Feedback feedback = grader.gradeCFG(answerStr, submittedStr, analyzer, limit);
+        Instant equivalenceDone = Instant.now();
+        //long timeTakenEquivalence = getTimeTaken(equivalenceDone);
+        feedback.info.add("Equivalence - time taken: " + getTimeTaken(equivalenceDone) + " ms.");
 
 //        if (grader.errored) {
 //            feedback.feedback = feedback.feedback + "Errored";
@@ -426,43 +433,28 @@ public class CFGAnalyzerInterface {
             }
 
             String witness = parts[1];
-            int witnessType;
-            if (pdaAnswer == null || pdaSubmission == null) {
+            Integer witnessType;
+            if (useUpgradedFeedback) {
+                if (pdaAnswer == null || pdaSubmission == null) {
 //                feedback.errors.add("DOING GRAMMAR -- BADDDD");
-                witnessType = grader.determineWitnessType(answer, submitted, witness);
-            } else {
+                    witnessType = grader.determineWitnessType(answer, submitted, witness);
+                } else {
 //                feedback.errors.add("DOING pdaDetermineWitnessType");
-                witnessType = grader.pdaDetermineWitnessType(pdaAnswer, pdaSubmission, witness);
+                    witnessType = grader.pdaDetermineWitnessType(pdaAnswer, pdaSubmission, witness);
 //                feedback.errors.add("witnessType = " + witnessType);
 //                feedback.errors.add("encounteredTimeout = " + grader.encounteredTimeout);
-            }
+                }
+                long timeTakenWitnessType = Duration.between(equivalenceDone, Instant.now()).toMillis();
+                feedback.info.add("Witness type check - time taken: " + timeTakenWitnessType + " ms.");
 
-            if (grader.encounteredTimeout) {
-                feedback.warnings.add("encounteredTimeout = true");
-            }
-
-
-            if (witnessType == -1) {
-//                if (witness.contentEquals("")) {
-//                    feedbackStr = feedbackStr + "The empty string is an example.";
-//                } else {
-//                    feedbackStr = feedbackStr + "The string \"" + witness + "\" is an example.";
-//                }
-                //feedbackStr = "-1 -- ";
-                feedbackStr += feedback.feedback;
-            } else if (witnessType == 0) {
-                if (witness.contentEquals("")) {
-                    feedbackStr = feedbackStr + "The empty string should NOT be accepted.";
-                } else {
-                    feedbackStr = feedbackStr + "The string \"" + witness + "\" should NOT be accepted.";
+                if (grader.encounteredTimeout) {
+                    feedback.warnings.add("encounteredTimeout = true");
                 }
             } else {
-                if (witness.contentEquals("")) {
-                    feedbackStr = feedbackStr + "The empty string SHOULD be accepted.";
-                } else {
-                    feedbackStr = feedbackStr + "The string \"" + witness + "\" SHOULD be accepted.";
-                }
+                witnessType = null;
             }
+
+            feedbackStr = getFeedback(false, witnessType, witness);
 
             feedback.feedback = feedbackStr;// + feedback.feedback;
         }
