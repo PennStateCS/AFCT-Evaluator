@@ -1,6 +1,7 @@
 package afctevaluator;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import gui.DisableGUI;
 
 import java.time.Duration;
@@ -25,6 +26,7 @@ public class Main {
     public static boolean deterministic = false;
     private static boolean outputJson = false;
     public static Instant start;
+    public static boolean testMode = false;
 
     /**
      * A helper method for displaying the help/usage message for AFCT-Evaluator.
@@ -198,6 +200,13 @@ public class Main {
         return Duration.between(start, end).toMillis();
     }
 
+    public static String getTimeTakenWithUnits(Instant start, Instant end) {
+        //TODO: pick unit (ns, ms, secs) based on time taken
+        Duration duration = Duration.between(start, end);
+        //duration.
+        return "";
+    }
+
     /**
      * The main entry point for the AFCT-Evaluator program. Prints feedback to System.out.
      *
@@ -222,9 +231,16 @@ public class Main {
 
 
         if (Main.outputJson) {
-            Gson gson = new Gson();
-            String json = gson.toJson(feedback);
-            System.out.println(json);
+            if (!testMode) {
+                Gson gson = new Gson();
+                String json = gson.toJson(feedback);
+                System.out.println(json);
+            } else {
+                // Create a Gson instance configured for pretty printing
+                Gson prettyGson = new GsonBuilder().setPrettyPrinting().create();
+                String prettyJson = prettyGson.toJson(feedback);
+                System.out.println(prettyJson);
+            }
         } else {
             System.out.println(feedback.correct);
             System.out.println(feedback.feedback);

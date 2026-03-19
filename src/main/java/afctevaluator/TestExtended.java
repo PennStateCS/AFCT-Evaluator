@@ -45,7 +45,7 @@ public class TestExtended {
         return fileName;
     }
 
-    private static ArrayList<String> getNumberedTestFileNames(String baseName, int numFiles) {
+    public static ArrayList<String> getNumberedTestFileNames(String baseName, int numFiles) {
         ArrayList<String> fileNames = new ArrayList<>();
 
         for (int i = 1; i <= numFiles; i++) {
