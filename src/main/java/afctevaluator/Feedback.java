@@ -118,6 +118,18 @@ public class Feedback {
         return new Feedback(text, false);
     }
 
+    /**
+     * A helper method that creates feedback for submissions that are missing an initial state.
+     *
+     * @return initial state missing feedback
+     */
+    public static Feedback initialStateMissing() {
+        return new Feedback(getInitialStateMissingFeedbackString(), false);
+    }
+
+    public static String getInitialStateMissingFeedbackString() {
+        return "Your submission is missing an initial state.";
+    }
 
     public void addWarningsAndErrors(ArrayList<String> warnings, ArrayList<String> errors) {
         this.warnings.addAll(warnings);

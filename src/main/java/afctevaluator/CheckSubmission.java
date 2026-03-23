@@ -29,6 +29,7 @@ import regular.Discretizer;
 import regular.RegularExpression;
 
 import static afctevaluator.CFGAnalyzerInterface.*;
+import static afctevaluator.Feedback.getInitialStateMissingFeedbackString;
 import static afctevaluator.Main.getTimeTaken;
 import static afctevaluator.WitnessFeedbackHelper.getFeedback;
 import static automata.SimulatorFactory.getSimulator;
@@ -358,6 +359,9 @@ public class CheckSubmission {
 
         if (grader.getHasInputError()) {
             feedbackStr = grader.getInputErrorMessage();
+            if (feedbackStr.equals("Initial state missing")) {
+                feedbackStr = getInitialStateMissingFeedbackString();
+            }
         } else if (!correct) {
             String witness = grader.getWitness();
 
@@ -373,7 +377,9 @@ public class CheckSubmission {
             feedbackStr = getFeedback(false, witnessType, witness);
         }
 
-        return new Feedback(feedbackStr, correct);
+        feedback.feedback = feedbackStr;
+        feedback.correct = correct;
+        return feedback;
     }
 
     /**
@@ -528,6 +534,9 @@ public class CheckSubmission {
                 }
                 if ((maxStates > 0) && (submittedPDA.getStates().length > maxStates)) {
                     return Feedback.tooManyStates(maxStates, submittedPDA.getStates().length);
+                }
+                if (submittedPDA.getInitialState() == null) {
+                    return Feedback.initialStateMissing();
                 }
                 return handlePDA(answerPDA, submittedPDA);
             }
