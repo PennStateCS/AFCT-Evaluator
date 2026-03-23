@@ -460,7 +460,6 @@ public class CheckSubmission {
      * @return the corresponding feedback
      */
     private Feedback handlePDA(PushdownAutomaton answer, PushdownAutomaton submitted) {
-        // TODO: test if this fixes anything
         Grammar answerCFG = PDAToCFG(answer);
         Grammar submittedCFG = PDAToCFG(submitted);
         return handleGrammar(answerCFG, submittedCFG, answer, submitted);
