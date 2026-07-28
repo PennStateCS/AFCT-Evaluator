@@ -114,7 +114,7 @@ public class Feedback {
      * @return too many states feedback
      */
     public static Feedback tooManyStates(int expected, int actual) {
-        String text = String.format("Your submission has too many states. (%d > %d)", expected, actual);
+        String text = String.format("Your submission has too many states (%d); the maximum allowed is %d.", actual, expected);
         return new Feedback(text, false);
     }
 
