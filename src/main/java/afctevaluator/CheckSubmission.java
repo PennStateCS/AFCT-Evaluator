@@ -489,12 +489,26 @@ public class CheckSubmission {
                 if (!(submitted instanceof FiniteStateAutomaton submittedFSA)) {
                     return Feedback.submissionTypeError(FiniteStateAutomaton.class, submitted);
                 }
-                if (deterministic && !Grader.isSipserDFA(submittedFSA)) {
-                    return new Feedback("Your submission is not deterministic.", false);
-                } else if ((maxStates > 0) && (submittedFSA.getStates().length > maxStates)) {
+                if ((maxStates > 0) && (submittedFSA.getStates().length > maxStates)) {
                     return Feedback.tooManyStates(maxStates, submittedFSA.getStates().length);
                 }
-                return handleFSA(answerFSA, submittedFSA);
+
+                Feedback fsaFeedback = handleFSA(answerFSA, submittedFSA);
+
+                // Check for determinism AFTER everything else.
+                if (deterministic && !Grader.isSipserDFA(submittedFSA)) {
+                    String nonDeterministicMsg = "Your submission is not deterministic.";
+                    // If correct, replace feedback message completely
+                    if (fsaFeedback.correct) {
+                        fsaFeedback.feedback = nonDeterministicMsg;
+                    }
+                    // If incorrect, append nonDeterministicMsg to feedback
+                    else {
+                        fsaFeedback.feedback = fsaFeedback.feedback + " " + nonDeterministicMsg;
+                    }
+                    fsaFeedback.correct = false;
+                }
+                return fsaFeedback;
             }
             case RegularExpression answerRE -> {
                 if (!(submitted instanceof RegularExpression submittedRE)) {
