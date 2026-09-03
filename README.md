@@ -25,5 +25,15 @@ mvn install:install-file -Dfile="afct-client/afct-client-v1.6.7.jar" -DgroupId="
 * Change the current directory to `target` folder
 * Run `java -jar afct-evaluator.jar -h` for more details
 
+## AFCT Client
+
+This repository contains the evaluator for AFCT.
+
+Related repositories:
+
+- [AFCT Dashboard](https://github.com/PennStateCS/AFCT)
+- [AFCT Client](https://github.com/PennStateCS/AFCT-Client)
+
+
 ## Note
 * Testing files are located in the `TESTINPUT` folder, including a text file including example scripts
