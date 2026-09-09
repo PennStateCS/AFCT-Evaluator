@@ -20,7 +20,16 @@
         <dependency>
             <groupId>edu.rit.cs</groupId>
             <artifactId>afct-client</artifactId>
-            <version>1.6.7</version>
+            <!--
+                A fixed version, never "the newest client". The same evaluator source has to
+                build into the same program every time, which matters more here than in most
+                projects because this one decides marks. Bump it deliberately, and re-run the
+                dashboard's `npm run test:evaluator` before releasing the result.
+
+                scripts/install-client-dependency.sh fetches this version from the client's
+                releases, so a bump needs no jar committed here.
+            -->
+            <version>1.6.8</version>
         </dependency>
         <dependency>
             <groupId>com.google.code.gson</groupId>

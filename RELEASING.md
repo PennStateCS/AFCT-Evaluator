@@ -10,6 +10,12 @@ version 1.4.0".
 A release contains one thing: the jar. The evaluator is run with `java -jar`, so there is nothing
 to install.
 
+The evaluator is built against a **fixed** version of the AFCT client, named in `pom.xml` and
+downloaded from that repository's releases. It is never built against whatever the newest client
+happens to be: the same source has to produce the same program every time, because this one
+decides marks. Changing that version is a deliberate act, and the dashboard's
+`npm run test:evaluator` is what tells you the change was safe.
+
 ## Before you start
 
 Make sure your changes are already merged into `main` and the checks passed. Look for the green
@@ -103,12 +109,11 @@ You skipped step 2, or the number in the tag is not the number in `pom.xml`. To 
 2. Update `<version>` in `pom.xml` to match, through a pull request as usual.
 3. Tag again once that is merged.
 
-**"pom.xml asks for afct-client X, but afct-client/afct-client-vX.jar is not in this repository."**
+**"could not download afct-client-vX.jar"**
 
-Somebody changed which client version the evaluator builds against without adding that client jar
-to the `afct-client` folder. Download the matching jar from the
-[AFCT Client releases](https://github.com/PennStateCS/AFCT-Client/releases), add it to that
-folder, and merge that before tagging.
+The evaluator builds against a fixed client version, and that version has no release to download.
+Somebody changed the client version in `pom.xml` without the client being released at that number.
+Either release the client at that version first, or point `pom.xml` back at a version that exists.
 
 ### Removing a tag
 

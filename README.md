@@ -11,8 +11,11 @@ Run this once, and again whenever the client version in `pom.xml` changes:
 ```shell
 ./scripts/install-client-dependency.sh
 ```
-It reads the version from `pom.xml` and installs the matching jar from `afct-client/`, so it
-cannot go stale the way a copied command line does. Then build with `mvn clean verify`.
+It reads the version from `pom.xml` and downloads that jar from the
+[client's releases](https://github.com/PennStateCS/AFCT-Client/releases), so it cannot go stale
+the way a copied command line does. If a copy is already in `afct-client/` it uses that instead,
+which is what keeps older versions building and lets you work offline. Then build with
+`mvn clean verify`.
 
 ## Set Enviroment Variables
 ### Automatic Setup
