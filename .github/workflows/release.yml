@@ -102,6 +102,13 @@ jobs:
       - name: Build
         run: mvn -B clean verify
 
+      # The same check CI runs, against the jar this release is about to publish. A release
+      # is exactly the wrong moment to find out a verdict changed.
+      - name: Run the golden cases
+        run: |
+          chmod +x bin/cfganalyzer
+          python3 scripts/run-golden-cases.py
+
       - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}

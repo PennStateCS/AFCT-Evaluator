@@ -3,11 +3,14 @@ name: CI
 # The evaluator's only automated check. Nothing ran here before, so a pull request that
 # stopped it compiling could be merged and nobody would know until somebody built it.
 #
-# Be clear about what this does and does not prove. There is no src/test in this repository,
-# so `verify` compiles and packages and runs no tests. The real safety net for the evaluator
-# is the golden-case suite in the AFCT dashboard repository (`npm run test:evaluator`), which
-# checks a built jar against known correct and incorrect verdicts. This catches a build that
-# is broken, not a verdict that is wrong.
+# Two things run here, and the second is the one that matters. Building proves the evaluator
+# compiles. The golden cases run the built jar against submissions whose right answer is
+# already known, so a change that alters a verdict fails the build rather than reaching a
+# course. The evaluator decides marks; a green build that grades differently is the failure
+# worth catching.
+#
+# The same cases are kept in the dashboard repository, where they guard the jar that ships
+# there. Deliberately two copies: this one guards the code, that one guards the jar.
 on:
   push:
     branches: ['main']
@@ -53,6 +56,14 @@ jobs:
       # the artifact below could carry a jar this commit never produced.
       - name: Build
         run: mvn -B clean verify
+
+      # The cfganalyzer binary is committed here as a Linux x86-64 executable, and git does
+      # not record the execute bit for everyone, so make sure it can actually run before a
+      # CFG case tries to use it.
+      - name: Run the golden cases
+        run: |
+          chmod +x bin/cfganalyzer
+          python3 scripts/run-golden-cases.py
 
       - name: Keep the jar
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
