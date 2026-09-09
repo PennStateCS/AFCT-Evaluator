@@ -1,0 +1,120 @@
+name: Release
+
+# Cut a release by pushing a version tag:
+#   git tag v1.4.0 && git push origin v1.4.0
+#
+# That builds the tagged commit and opens a GitHub Release with the jar attached, which is
+# the copy the AFCT dashboard and anyone else can download without a GitHub account.
+#
+# Ordinary merges to main do NOT trigger this. CI keeps running on them; a release is a
+# separate, deliberate act, and the tag is what makes it.
+#
+# Only a jar: the evaluator is a command-line tool run with `java -jar`, so there is nothing
+# to install and no installers to build.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  # Creating a release is the only privileged thing here.
+  contents: write
+
+# Letting a second run cancel a half-finished publish would be worse than letting it finish.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  # Both refusals live here, before anything is built or published.
+  verify:
+    name: check the tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      # A tag can point at any commit, including one CI's paths filter skipped and one CI
+      # never saw. Without this the first anybody knows is a published release built from
+      # code that was never checked.
+      - name: Require a successful CI run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          count=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success" \
+            --jq '.total_count')
+          if [ "${count}" -lt 1 ]; then
+            echo "::error::No successful CI run for ${SHA}, so this tag is not releasable."
+            echo "Tag a commit CI has passed, or run CI on this ref (Actions > CI > Run workflow) and re-tag."
+            exit 1
+          fi
+          echo "CI passed for ${SHA} (${count} successful run(s))."
+
+      # The tag names the release; the pom names what is inside it. The build bakes the pom
+      # version into the jar name and the jar manifest, so tagging v1.5.0 against a pom that
+      # still says 1.4.0 publishes a release called one thing containing another.
+      #
+      # Read with an XML parser rather than a grep, so it cannot pick up a dependency's
+      # <version> instead of the project's own.
+      - name: Tag must match the pom version
+        run: |
+          set -euo pipefail
+          # One line on purpose: an indented heredoc would hand Python indented source and
+          # fail before it read anything. find() matches direct children only, so this is
+          # the project's own version.
+          pom=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text.strip())")
+          want="${GITHUB_REF_NAME#v}"
+          # Compare the numbers only, so a test release can be cut from the same code as the
+          # real one: pom 1.4.0 accepts both v1.4.0 and v1.4.0-rc1.
+          if [ "${pom}" != "${want%%-*}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the pom version ${pom}."
+            echo "Bump <version> in pom.xml to ${want%%-*} (or tag v${pom}), then re-tag."
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} matches the pom version ${pom}."
+
+  publish:
+    name: build and publish
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Set up Java 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - name: Install the client dependency
+        run: ./scripts/install-client-dependency.sh
+
+      # Built here rather than reusing CI's artifact: that artifact belongs to whatever commit
+      # produced it, and a minute of rebuilding is cheaper than reasoning about whether it is
+      # the same tree. `clean` because target/ is committed and holds jars from old versions.
+      - name: Build
+        run: mvn -B clean verify
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          ls -lh target/afct-evaluator*.jar
+          # A hyphen means a pre-release tag (v1.5.0-rc1), which must not become the download
+          # people land on.
+          flags=(--title "$TAG" --generate-notes --verify-tag)
+          case "$TAG" in
+            *-*) flags+=(--prerelease) ;;
+          esac
+          gh release create "$TAG" "${flags[@]}" \
+            target/afct-evaluator-v*.jar \
+            target/afct-evaluator.jar

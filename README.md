@@ -7,10 +7,15 @@
 
 ## Maven Command
 To compile the AFCT Evaluator, you will first need to add the AFCT Client as a Maven dependency.
-This can be done using the following command:
+Run this once, and again whenever the client version in `pom.xml` changes:
 ```shell
-mvn install:install-file -Dfile="afct-client/afct-client-v1.6.7.jar" -DgroupId="edu.rit.cs" -DartifactId="afct-client" -Dversion="1.6.7" -Dpackaging=jar
+./scripts/install-client-dependency.sh
 ```
+It reads the version from `pom.xml` and downloads that jar from the
+[client's releases](https://github.com/PennStateCS/AFCT-Client/releases), so it cannot go stale
+the way a copied command line does. If a copy is already in `afct-client/` it uses that instead,
+which is what keeps older versions building and lets you work offline. Then build with
+`mvn clean verify`.
 
 ## Set Enviroment Variables
 ### Automatic Setup
@@ -34,6 +39,9 @@ Related repositories:
 - [AFCT Dashboard](https://github.com/PennStateCS/AFCT)
 - [AFCT Client](https://github.com/PennStateCS/AFCT-Client)
 
+
+## Making a release
+Pushing a version tag publishes a downloadable jar. See [RELEASING.md](RELEASING.md) for the steps.
 
 ## Note
 * Testing files are located in the `TESTINPUT` folder, including a text file including example scripts
